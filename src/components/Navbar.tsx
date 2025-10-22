@@ -22,10 +22,10 @@ export function Navbar({ variant = "landing" }: NavbarProps) {
           <div className="flex items-center gap-4">
             {variant === "landing" ? (
               <>
-                <Link href="/login">
+                <Link href="/sign-in">
                   <Button variant="ghost" data-testid="button-login">Log In</Button>
                 </Link>
-                <Link href="/signup">
+                <Link href="/sign-up">
                   <Button data-testid="button-signup">Get Started</Button>
                 </Link>
               </>
