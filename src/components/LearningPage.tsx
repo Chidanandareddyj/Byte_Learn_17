@@ -27,10 +27,31 @@ export function LearningPage() {
   const searchParams = useSearchParams();
   const videoId = searchParams.get("id") ?? undefined;
 
-  const { data: video, isLoading } = useQuery<Video>({
-    queryKey: ["/api/videos", videoId],
-    enabled: !!videoId,
-  });
+  // TODO: Uncomment when /api/videos/:id route is implemented
+  // const { data: video, isLoading } = useQuery<Video>({
+  //   queryKey: ["/api/videos", videoId],
+  //   enabled: !!videoId,
+  // });
+  
+  // Mock video data for now - remove when API is ready
+  const video: Video | undefined = videoId ? {
+    id: videoId,
+    title: "Sample Video Title",
+    script: "This is a sample transcript.\n\nIt has multiple paragraphs.",
+    explanation: {
+      steps: [
+        {
+          heading: "Step 1",
+          content: "This is the first step of the explanation."
+        },
+        {
+          heading: "Step 2",
+          content: "This is the second step of the explanation."
+        }
+      ]
+    }
+  } : undefined;
+  const isLoading = false;
 
   if (isLoading) {
     return (

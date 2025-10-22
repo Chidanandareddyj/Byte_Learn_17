@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Loader2 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // TODO: Uncomment when API routes are ready
 import { formatDistanceToNow } from "date-fns";
 
 interface Video {
@@ -19,28 +19,36 @@ interface Video {
 
 export function Dashboard() {
   const [prompt, setPrompt] = useState("");
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient(); // TODO: Uncomment when API routes are ready
 
-  const { data: videos = [], isLoading } = useQuery<Video[]>({
-    queryKey: ["/api/videos"],
-  });
+  // TODO: Uncomment when /api/videos route is implemented
+  // const { data: videos = [], isLoading } = useQuery<Video[]>({
+  //   queryKey: ["/api/videos"],
+  // });
+  const videos: Video[] = [];
+  const isLoading = false;
 
-  const generateMutation = useMutation({
-    mutationFn: async (prompt: string) => {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ prompt }),
-      });
-      if (!res.ok) throw new Error("Failed to generate");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
-      setPrompt("");
-    },
-  });
+  // TODO: Uncomment when /api/generate route is fully implemented
+  // const generateMutation = useMutation({
+  //   mutationFn: async (prompt: string) => {
+  //     const res = await fetch("/api/generate", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       credentials: "include",
+  //       body: JSON.stringify({ prompt }),
+  //     });
+  //     if (!res.ok) throw new Error("Failed to generate");
+  //     return res.json();
+  //   },
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
+  //     setPrompt("");
+  //   },
+  // });
+  const generateMutation = {
+    mutate: (prompt: string) => console.log("Generate:", prompt),
+    isPending: false,
+  };
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
