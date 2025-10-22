@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { GraduationCap } from "lucide-react";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
 interface NavbarProps {
   variant?: "landing" | "app";
@@ -20,20 +21,37 @@ export function Navbar({ variant = "landing" }: NavbarProps) {
           </Link>
 
           <div className="flex items-center gap-4">
-            {variant === "landing" ? (
-              <>
-                <Link href="/sign-in">
-                  <Button variant="ghost" data-testid="button-login">Log In</Button>
+            <SignedOut>
+              {variant === "landing" ? (
+                <>
+                  <Link href="/sign-in">
+                    <Button variant="ghost" data-testid="button-login">Log In</Button>
+                  </Link>
+                  <Link href="/sign-up">
+                    <Button data-testid="button-signup">Get Started</Button>
+                  </Link>
+                </>
+              ) : (
+                <Link href="/dashboard">
+                  <Button variant="ghost" data-testid="button-dashboard">Dashboard</Button>
                 </Link>
-                <Link href="/sign-up">
-                  <Button data-testid="button-signup">Get Started</Button>
-                </Link>
-              </>
-            ) : (
+              )}
+            </SignedOut>
+            
+            <SignedIn>
               <Link href="/dashboard">
                 <Button variant="ghost" data-testid="button-dashboard">Dashboard</Button>
               </Link>
-            )}
+              <UserButton 
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: "h-8 w-8"
+                  }
+                }}
+              />
+            </SignedIn>
+            
             <ThemeToggle />
           </div>
         </div>
