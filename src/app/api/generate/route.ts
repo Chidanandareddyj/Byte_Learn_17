@@ -2,6 +2,9 @@ import { currentUser } from "@clerk/nextjs/server";
 import { PrismaClient } from "generated/prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { createClient } from "@supabase/supabase-js";
+import { text } from "stream/consumers";
 
 // Singleton pattern for PrismaClient to avoid connection issues
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
@@ -10,6 +13,17 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+// Initialize ElevenLabs client
+const elevenlabs = new ElevenLabsClient({
+  apiKey: process.env.ELEVENLABS_API_KEY,
+});
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role key for server-side operations
+);
+
 // Retry helper function for API calls
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -17,27 +31,27 @@ async function retryWithBackoff<T>(
   initialDelay = 1000
 ): Promise<T> {
   let lastError: any;
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn();
     } catch (error: any) {
       lastError = error;
-      
+
       // Check if it's a retryable error (503, 429, etc.)
       const isRetryable = error.status === 503 || error.status === 429;
-      
+
       if (!isRetryable || i === maxRetries - 1) {
         throw error;
       }
-      
+
       // Exponential backoff: 1s, 2s, 4s
       const delay = initialDelay * Math.pow(2, i);
       console.log(`Retry attempt ${i + 1}/${maxRetries} after ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  
+
   throw lastError;
 }
 
@@ -50,7 +64,8 @@ const scriptGenerationSchema = {
     },
     explanation: {
       type: Type.STRING,
-      description: "A detailed ChatGPT-style explanation of the mathematical concept. Explain the intuition, key ideas, and walk through the concept step-by-step in a conversational manner.",
+      description:
+        "A detailed ChatGPT-style explanation of the mathematical concept. Explain the intuition, key ideas, and walk through the concept step-by-step in a conversational manner.",
     },
     scenes: {
       type: Type.ARRAY,
@@ -88,10 +103,7 @@ export async function POST(request: NextRequest) {
   const { prompt } = await request.json();
 
   if (!prompt) {
-    return NextResponse.json(
-      { error: "Prompt is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
   }
 
   const systemInstruction = `You are an expert mathematics educator and content creator, in the style of 3Blue1Brown. 
@@ -142,23 +154,26 @@ export async function POST(request: NextRequest) {
     });
 
     const jsonText = response.text?.trim();
-    
+
     if (!jsonText) {
       throw new Error("Empty response from AI");
     }
 
     const result = JSON.parse(jsonText);
-    
+
     // Extract and combine all scene scripts
     const fullManimScript = result.scenes
       .map((scene: any) => `# Scene ${scene.sceneNumber}\n${scene.manimScript}`)
-      .join('\n\n');
-    
+      .join("\n\n");
+
     // Extract and combine all narrations
     const fullNarration = result.scenes
-      .map((scene: any, index: number) => `[Scene ${scene.sceneNumber}]\n${scene.narration}`)
-      .join('\n\n');
-    
+      .map(
+        (scene: any, index: number) =>
+          `[Scene ${scene.sceneNumber}]\n${scene.narration}`
+      )
+      .join("\n\n");
+
     // Store the complete script in the database
     const savedScript = await prisma.script.create({
       data: {
@@ -169,26 +184,76 @@ export async function POST(request: NextRequest) {
         promptId: storedPrompt.id, // Link to the prompt using the actual database ID
       },
     });
-    
+
     console.log(
-      "Script generated and saved:", fullManimScript,
-      "User:", clerkIdValue,
-      "Prompt ID:", storedPrompt.promptId,
-      "Script ID:", savedScript.scriptId
+      "Script generated and saved:",
+      fullManimScript,
+      "User:",
+      clerkIdValue,
+      "Prompt ID:",
+      storedPrompt.promptId,
+      "Script ID:",
+      savedScript.scriptId
     );
+
+    // Generate audio using ElevenLabs
+    console.log("Generating audio with ElevenLabs...");
+    const audioStream = await elevenlabs.textToSpeech.convert(
+      "JBFqnCBsd6RMkjVDRZzb", // Default voice ID (you can change this)
+      {
+        text: fullNarration,
+        modelId: "eleven_multilingual_v2",
+        outputFormat: "mp3_44100_128",
+      }
+    );
+
+    // Convert ReadableStream to Buffer
+    const reader = audioStream.getReader();
+    const chunks: Uint8Array[] = [];
     
-    // Return the complete result including database IDs
-    return NextResponse.json({ 
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
+    }
+    
+    const audioBuffer = Buffer.concat(chunks);
+
+    // Upload audio to Supabase Storage
+    const audioFileName = `${savedScript.scriptId}.mp3`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("audio")
+      .upload(audioFileName, audioBuffer, {
+        contentType: "audio/mpeg",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Error uploading audio to Supabase:", uploadError);
+      throw new Error(`Failed to upload audio: ${uploadError.message}`);
+    }
+
+    // Get public URL for the audio file
+    const { data: urlData } = supabase.storage
+      .from("audio")
+      .getPublicUrl(audioFileName);
+
+    const audioUrl = urlData.publicUrl;
+    console.log("Audio uploaded successfully:", audioUrl);
+
+    // Return the complete result including database IDs and audio URL
+    return NextResponse.json({
       success: true,
       promptId: storedPrompt.promptId,
       scriptId: savedScript.scriptId,
+      audioUrl: audioUrl,
       result: {
         title: result.title,
         explanation: result.explanation,
         scenes: result.scenes,
         fullManimScript: fullManimScript,
         fullNarration: fullNarration,
-      }
+      },
     });
   } catch (error) {
     console.error("Error generating content:", error);
