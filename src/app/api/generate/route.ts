@@ -241,6 +241,14 @@ export async function POST(request: NextRequest) {
     const audioUrl = urlData.publicUrl;
     console.log("Audio uploaded successfully:", audioUrl);
 
+    const storedAudio = await prisma.audio.create({
+      data: {
+        audioUrl: audioUrl,
+        promptId: storedPrompt.id,
+      },
+    });
+    console.log("Audio record saved in database:", storedAudio);
+
     // Return the complete result including database IDs and audio URL
     return NextResponse.json({
       success: true,
