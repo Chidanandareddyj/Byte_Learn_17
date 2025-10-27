@@ -273,7 +273,6 @@ export async function POST(request: NextRequest) {
   try {
     const clerkIdValue = clerkid?.id || "unknown";
 
-    // Parallel execution: user upsert and prompt storage don't depend on each other
     const [user, storedPrompt] = await Promise.all([
       prisma.user.upsert({
         where: { clerkId: clerkIdValue },
@@ -288,10 +287,9 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    // AI generation with retry logic (this is the slow part)
     const response = await retryWithBackoff(async () => {
       return await ai.models.generateContent({
-        model: "gemini-2.0-flash", // More stable than gemini-2.5-pro
+        model: "gemini-2.0-flash",
         contents: `Generate a video script for the topic: "${prompt}"`,
         config: {
           systemInstruction,
@@ -428,6 +426,13 @@ export async function POST(request: NextRequest) {
       console.error("Video generation failed:", videoResponse);
       throw new Error(`Video generation failed: ${JSON.stringify(videoResponse)}`);
     }
+    const storedVideo = await prisma.video.create({
+      data: {
+        videoUrl: videoResponse.video_url,
+        promptId: storedPrompt.id,
+      },
+    });
+    console.log("Video record saved in database:", storedVideo);
 
     // Return the complete result including database IDs and audio URL
     return NextResponse.json({

@@ -29,6 +29,7 @@ model Prompt {
   updatedAt DateTime @updatedAt
   scripts Script[]
   audios Audio[]
+  videos Video[]
 }
 
 model Script {
@@ -45,6 +46,14 @@ model Script {
 model Audio{
   id String @id @default(cuid())
   audioUrl String
+  createdAt DateTime @default(now())
+  promptId String
+  prompt Prompt @relation(fields: [promptId], references: [id])
+}
+
+model Video{
+  id String @id @default(cuid())
+  videoUrl String
   createdAt DateTime @default(now())
   promptId String
   prompt Prompt @relation(fields: [promptId], references: [id])
