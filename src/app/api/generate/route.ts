@@ -160,6 +160,8 @@ export async function POST(request: NextRequest) {
   - **METHOD CALLS**: Ensure all method calls are properly indented within their parent scope
   
   ⚠️ ABSOLUTELY FORBIDDEN - THESE WILL CAUSE ERRORS ⚠️:
+  - ❌ NEVER use MathTex() - CAUSES LaTeX standalone.cls errors on server
+  - ❌ NEVER use Tex() - CAUSES LaTeX standalone.cls errors on server
   - ❌ NEVER use .add_updater() - CAUSES TypeError
   - ❌ NEVER use .clear_updaters() - CAUSES TypeError
   - ❌ NEVER use UpdateFromAlphaFunc - CAUSES TypeError
@@ -168,11 +170,15 @@ export async function POST(request: NextRequest) {
   - ❌ NEVER define update functions inside construct()
   - ❌ NEVER use axes.get_tangent() - DOES NOT EXIST
   - ❌ NEVER use axes.get_secant_slope_group() - DOES NOT EXIST
+  - ❌ NEVER use axis_config={"include_numbers": True} - CAUSES LaTeX errors in minimal installation
+  - ❌ NEVER use axes.get_axis_labels() - CAUSES LaTeX errors in minimal installation
+  - ❌ NEVER use axes.get_x_axis_label() or axes.get_y_axis_label() - CAUSES LaTeX errors
   - ❌ NEVER use ApplyMethod - DEPRECATED
   - ❌ NEVER use ShowCreation - DEPRECATED (use Create instead)
   
   ✅ ONLY USE THESE SAFE PATTERNS:
   - Use direct object creation and simple animations
+  - For text: ONLY Text() with Unicode math symbols - NO MathTex, NO Tex
   - For movement: self.play(obj.animate.move_to([x, y, 0]), run_time=2)
   - For transformations: self.play(Transform(obj1, obj2), run_time=2)
   - For visual effects: Create, FadeIn, FadeOut, Write only
@@ -201,15 +207,53 @@ export async function POST(request: NextRequest) {
           self.play(Write(title), run_time=2)
           self.wait(1)"
   
+  🚨 CRITICAL: NO LATEX - USE TEXT() FOR EVERYTHING 🚨
+  - ❌ NEVER EVER use MathTex() - CAUSES LaTeX errors on server (standalone.cls not found)
+  - ❌ NEVER EVER use Tex() - CAUSES LaTeX errors on server
+  - ✅ ALWAYS use Text() for ALL text including math formulas
+  - ✅ For math: Use Text("x² + 2x + 1") or Text("∫ f(x) dx") with Unicode symbols
+  - ✅ Unicode symbols you can use: ∫ ∑ ∏ √ ² ³ ± × ÷ ≈ ≤ ≥ ∞ π θ α β γ λ Δ ∂
+  
   - Use ONLY these verified Manim classes and methods:
     * Shapes: Circle, Square, Rectangle, Triangle, Polygon, Line, Arrow, Dot, Ellipse
-    * Text/Math: Text, MathTex (for math only - use Text() for regular text to avoid LaTeX errors)
-    * Graphs: Axes (with axis_config={"include_numbers": True} for labels), NumberPlane, Graph
+    * Text: Text() ONLY - no MathTex, no Tex
+    * Graphs: Axes (WITHOUT include_numbers), NumberPlane, Graph
     * Groups: VGroup, VDict
     * Animations: Create, FadeIn, FadeOut, Transform, ReplacementTransform, Write, GrowFromCenter, Indicate, Circumscribe
     * Movement: Use .animate syntax - obj.animate.shift(), obj.animate.move_to(), obj.animate.rotate(), obj.animate.scale()
     * Methods: .shift(), .next_to(), .to_edge(), .move_to(), .scale(), .rotate(), .set_color(), .set_opacity()
-    * AVOID: add_updater, clear_updaters, UpdateFromAlphaFunc, ApplyMethod, ShowCreation
+    * AVOID: add_updater, clear_updaters, UpdateFromAlphaFunc, ApplyMethod, ShowCreation, axis_config with include_numbers, MathTex, Tex
+  
+  🚨 CRITICAL: AXIS LABELS IN MINIMAL LATEX ENVIRONMENT 🚨
+  - ❌ NEVER use axis_config={"include_numbers": True} - it uses MathTex internally which requires LaTeX packages
+  - ❌ NEVER use axes.get_axis_labels() - it uses MathTex internally which requires LaTeX packages
+  - ❌ NEVER use axes.get_x_axis_label() or axes.get_y_axis_label()
+  - ❌ NEVER use MathTex() or Tex() - CAUSES standalone.cls LaTeX errors
+  - ✅ ALWAYS create Axes WITHOUT include_numbers
+  - ✅ ALWAYS create axis labels manually using Text() and position them with .next_to()
+  - ✅ Use Text() with Unicode math symbols for all formulas
+  
+  HOW TO CREATE AXES (Minimal LaTeX Compatible):
+  WRONG: axes = Axes(x_range=[0, 5, 1], y_range=[0, 10, 2], axis_config={"include_numbers": True})
+  CORRECT: axes = Axes(x_range=[0, 5, 1], y_range=[0, 10, 2])
+  
+  Then add custom labels with Text():
+  x_label = Text("x", font_size=36).next_to(axes.x_axis.get_end(), RIGHT)
+  y_label = Text("y", font_size=36).next_to(axes.y_axis.get_end(), UP)
+  self.play(Create(axes), run_time=2)
+  self.play(Write(x_label), Write(y_label), run_time=1)
+  
+  HOW TO SHOW MATH FORMULAS WITHOUT LATEX:
+  WRONG: formula = MathTex(r"x^2 + 2x + 1")
+  CORRECT: formula = Text("x² + 2x + 1", font_size=36)
+  
+  WRONG: integral = MathTex(r"\int_0^1 x^2 dx")
+  CORRECT: integral = Text("∫₀¹ x² dx", font_size=36)
+  
+  WRONG: sum_formula = MathTex(r"\sum_{i=1}^n i = \frac{n(n+1)}{2}")
+  CORRECT: sum_formula = Text("∑ᵢ₌₁ⁿ i = n(n+1)/2", font_size=32)
+  
+  Unicode symbols available: ∫ ∑ ∏ √ ² ³ ⁴ ⁿ ₀ ₁ ₂ ± × ÷ ≈ ≤ ≥ ≠ ∞ π θ α β γ λ Δ ∂ ∈ ∉ ⊂ ⊃ ∪ ∩
   
   ANIMATION PACING (CRITICAL for longer videos):
   - Use run_time parameters generously: run_time=2 to run_time=4 for important animations
@@ -230,27 +274,42 @@ export async function POST(request: NextRequest) {
   - To rotate objects: self.play(obj.animate.rotate(PI/4), run_time=2)
   - Multiple properties: self.play(obj.animate.shift(UP).scale(2).set_color(RED), run_time=2)
   
-  CRITICAL TEXT RENDERING RULES:
-  - **NEVER use Tex() class** - it causes LaTeX compilation errors
-  - **ALWAYS use Text() for regular text** - e.g., Text("Hello World") instead of Tex("Hello World")
-  - **Only use MathTex() for mathematical formulas** - e.g., MathTex(r"x^2 + 2x + 1")
-  - For titles, labels, descriptions: Use Text()
-  - For equations, formulas, symbols: Use MathTex()
+  🚨 CRITICAL TEXT RENDERING - NO LATEX ALLOWED 🚨:
+  - ❌ NEVER EVER use Tex() class - CAUSES standalone.cls LaTeX errors
+  - ❌ NEVER EVER use MathTex() class - CAUSES standalone.cls LaTeX errors
+  - ✅ ALWAYS ALWAYS use Text() for ALL text including math formulas
+  - ✅ Use Unicode symbols in Text() for math: Text("∫₀¹ x² dx", font_size=36)
+  - ✅ For titles, labels, descriptions: Text("Hello World")
+  - ✅ For equations, formulas, symbols: Text("x² + 2x + 1") with Unicode
   
-  - For Axes: Use axis_config={"include_numbers": True} to show numbers. DO NOT use add_coordinate_labels() - it doesn't exist
+  Examples of CORRECT math rendering:
+  - equation = Text("f(x) = x² + 2x + 1", font_size=40)
+  - integral = Text("∫₀¹ x² dx = 1/3", font_size=36)
+  - sum_text = Text("∑ᵢ₌₁ⁿ i = n(n+1)/2", font_size=32)
+  - limit = Text("lim(x→∞) 1/x = 0", font_size=36)
+  - derivative = Text("d/dx(x²) = 2x", font_size=36)
+  - area_text = Text("Area ≈ sum of rectangles", font_size=32)
+  
+  Examples of WRONG rendering (WILL CRASH SERVER):
+  - ❌ equation = MathTex(r"f(x) = x^2 + 2x + 1")  # NO! CAUSES ERROR!
+  - ❌ integral = MathTex(r"\int_0^1 x^2 dx")  # NO! CAUSES ERROR!
+  - ❌ text = Tex("Hello")  # NO! CAUSES ERROR!
+  
   - For Riemann rectangles: Use axes.get_riemann_rectangles(graph, x_range=[a, b], dx=width, color=COLOR, fill_opacity=0.5)
   - For plotting functions: Use axes.plot(func, x_range=[a, b], color=COLOR) or axes.plot(lambda x: expression, ...)
   - AVOID deprecated methods: ShowCreation (use Create instead), ApplyMethod (use .animate syntax)
+  - AVOID LaTeX: MathTex, Tex (use Text() with Unicode instead)
   - Each scene MUST be a complete class that extends Scene with a construct() method
   - Make animations smooth and visually appealing like 3Blue1Brown
   - Each scene should be self-contained and executable without errors
   
-  LaTeX CONSTRAINTS (using minimal LaTeX installation):
-  - ONLY use BASIC LaTeX math commands in MathTex(): \\frac{}{}, \\sqrt{}, ^{}, _{}, \\int, \\sum, \\lim, \\sin, \\cos, \\tan, \\pi, \\alpha, \\beta, \\theta
-  - AVOID special packages: NO \\usepackage commands, NO \\mathbb, NO \\mathcal, NO \\bm, NO \\boldsymbol
-  - For sets like ℝ, ℂ, ℕ: Use Text("R") with styling instead of MathTex(r"\\mathbb{R}")
-  - For matrices: Use basic \\begin{matrix} or \\begin{array}{cc} (avoid amsmath extras)
-  - Keep LaTeX simple and standard - stick to what's in basic LaTeX (1980s syntax)
+  🚨 NO LATEX ALLOWED - SERVER HAS MINIMAL INSTALLATION 🚨:
+  - ❌ NEVER use MathTex() - Server lacks standalone.cls LaTeX package
+  - ❌ NEVER use Tex() - Server lacks standalone.cls LaTeX package  
+  - ✅ ONLY use Text() with Unicode symbols for ALL text including math
+  - Unicode symbols: ∫ ∑ ∏ √ ² ³ ⁴ ⁿ ₀ ₁ ₂ ₃ ± × ÷ ≈ ≤ ≥ ≠ ∞ π θ α β γ λ Δ ∂ ∈ ∉ ⊂ ⊃ ∪ ∩
+  - Example: Text("∫₀¹ x² dx = 1/3") instead of MathTex(r"\int_0^1 x^2 dx = \frac{1}{3}")
+  - Example: Text("F(x) = ∫ f(x) dx") instead of MathTex(r"F(x) = \int f(x) dx")
   
   CONTENT DEPTH:
   - Don't assume prior knowledge - explain from first principles
@@ -400,8 +459,10 @@ export async function POST(request: NextRequest) {
       });
       console.log("Audio record saved in database:", storedAudio);
     } else {
-      console.log("TTS disabled (ENABLE_TTS=false) - Skipping audio generation to save credits");
-      audioUrl = "TTS_DISABLED";
+      // Use test audio URL when TTS is disabled to save ElevenLabs credits
+      // Replace this with your own test audio file URL from Supabase
+      audioUrl = process.env.TEST_AUDIO_URL || "https://geruuvhlyduaoelpwqbj.supabase.co/storage/v1/object/public/audio/1761579733647-c21w24i.mp3";
+      console.log("TTS disabled - Using test audio URL for muxing:", audioUrl);
     }
 
     // Backend will auto-detect all scene classes and render them sequentially
@@ -434,6 +495,35 @@ export async function POST(request: NextRequest) {
     });
     console.log("Video record saved in database:", storedVideo);
 
+
+    const mux = await fetch(`${BACKEND_URL}/mux-audio-video`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        video_url: videoResponse.video_url,
+        audio_url: audioUrl,
+        output_name: `final_${savedScript.scriptId}`,
+        bucket_name: "muxvideos"
+      })
+    });
+
+    const muxResponse = await mux.json();
+    console.log("Muxing response:", muxResponse);
+    
+    if (!mux.ok) {
+      console.error("Muxing failed:", muxResponse);
+      throw new Error(`Muxing failed: ${JSON.stringify(muxResponse)}`);
+    }
+    
+    const storedMuxVideo = await prisma.video.create({
+      data: {
+        videoUrl: muxResponse.combined_url,
+        promptId: storedPrompt.id,
+      },
+    });
+    console.log("Muxed video record saved in database:", storedMuxVideo);
     // Return the complete result including database IDs and audio URL
     return NextResponse.json({
       success: true,
