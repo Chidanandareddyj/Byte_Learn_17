@@ -9,10 +9,10 @@ const QUALITY_OPTIONS = new Set(["low", "medium", "high"]);
 
 export async function POST(
   request: NextRequest,
-  context: { params: { promptId: string } }
+  context: { params: Promise<{ promptId: string }> }
 ) {
   try {
-    const promptId = context.params.promptId;
+    const { promptId } = await context.params;
 
     const prompt = await getPromptByPublicId(promptId);
 
