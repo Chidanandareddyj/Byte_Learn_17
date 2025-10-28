@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RefreshCw, Download, Share2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { RefreshCw, Download, Share2, ChevronDown, ChevronUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 interface Video {
@@ -36,14 +37,7 @@ export function LearningPage() {
   });
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen notebook-bg">
-        <Navbar variant="app" />
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!video) {

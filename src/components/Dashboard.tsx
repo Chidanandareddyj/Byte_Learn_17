@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { VideoCard } from "@/components/VideoCard";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { BorderBeam } from "@/components/ui/border-beam";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +61,11 @@ export function Dashboard() {
     generateMutation.mutate(prompt);
   };
 
+  // Show loading screen when generating
+  if (generateMutation.isPending) {
+    return <LoadingScreen prompt={prompt} />;
+  }
+
   return (
     <div className="min-h-screen notebook-bg">
       <Navbar variant="app" />
@@ -66,27 +73,29 @@ export function Dashboard() {
       <div className="container mx-auto px-6 py-8">
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-2">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Create New Learning
-                </CardTitle>
-                <CardDescription>
-                  Describe what you want to learn and we'll create a visual explanation
-                </CardDescription>
-              </CardHeader>
+            <div className="sticky top-24">
+              <Card className="relative overflow-hidden">
+                <BorderBeam size={150} duration={10} delay={0} />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                    Create New Learning
+                  </CardTitle>
+                  <CardDescription>
+                    Describe what you want to learn and we'll create a visual explanation
+                  </CardDescription>
+                </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
                   placeholder="Example: Explain how derivatives work using the slope of a tangent line..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="min-h-32 resize-none"
+                  className="min-h-32 resize-none focus:ring-2 focus:ring-primary/20 transition-all"
                   data-testid="input-prompt"
                   disabled={generateMutation.isPending}
                 />
                 <Button
-                  className="w-full"
+                  className="w-full group"
                   onClick={handleGenerate}
                   disabled={!prompt.trim() || generateMutation.isPending}
                   data-testid="button-generate"
@@ -97,7 +106,10 @@ export function Dashboard() {
                       Generating...
                     </>
                   ) : (
-                    "Generate Learning Video"
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2 transition-transform group-hover:rotate-12" />
+                      Generate Learning Video
+                    </>
                   )}
                 </Button>
                 <div className="space-y-2 text-sm text-muted-foreground">
@@ -109,7 +121,8 @@ export function Dashboard() {
                   </ul>
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            </div>
           </div>
 
           <div className="lg:col-span-3">

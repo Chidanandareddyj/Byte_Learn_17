@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { BorderBeam } from "@/components/ui/border-beam";
+import { AnimatedGradientText } from "@/components/ui/animated-gradient-text";
+import { RetroGrid } from "@/components/ui/retro-grid";
 // Use public/ path directly to avoid bundling issues with images
 const heroImage = "/generated_images/Manim_math_animation_demo_14bc8a1a.png";
 import { ArrowRight } from "lucide-react";
@@ -7,10 +10,19 @@ import { ArrowRight } from "lucide-react";
 export function Hero() {
   return (
     <section className="relative overflow-hidden py-20 md:py-32">
-      <div className="container mx-auto px-6">
+      <RetroGrid className="opacity-10" />
+      <div className="container relative z-10 mx-auto px-6">
         <div className="mx-auto max-w-5xl text-center">
           <h1 className="text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl">
-            Learn concepts visually, <span className="text-primary">one byte at a time</span>
+            Learn concepts visually,{" "}
+            <AnimatedGradientText
+              className="text-5xl md:text-6xl lg:text-7xl font-bold"
+              colorFrom="#60a5fa"
+              colorTo="#a855f7"
+              speed={1.5}
+            >
+              one byte at a time
+            </AnimatedGradientText>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
@@ -19,8 +31,9 @@ export function Hero() {
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link href="/signup">
-              <Button size="lg" className="gap-2" data-testid="button-cta-start">
-                Start Learning <ArrowRight className="h-4 w-4" />
+              <Button size="lg" className="gap-2 group" data-testid="button-cta-start">
+                Start Learning 
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
             <Link href="#features">
@@ -30,7 +43,8 @@ export function Hero() {
             </Link>
           </div>
 
-          <div className="mt-16 rounded-xl overflow-hidden shadow-2xl border">
+          <div className="relative mt-16 rounded-xl overflow-hidden shadow-2xl border">
+            <BorderBeam size={200} duration={12} delay={5} />
             <img
               src={heroImage}
               alt="Manim mathematical animation demonstration"
