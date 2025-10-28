@@ -19,8 +19,8 @@ export async function GET() {
       where: {
         OR: [
           { clerkId: clerkUser.id },
-          { clerkId: null }, // Include prompts without a clerkId (old data)
-          { clerkId: "unknown" }, // Include prompts with "unknown" clerkId (old data)
+          // { clerkId: null }, // Include prompts without a clerkId (old data)
+          // { clerkId: "unknown" }, // Include prompts with "unknown" clerkId (old data)
         ]
       },
       include: {
