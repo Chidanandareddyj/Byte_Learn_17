@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { AnimatedGradientText } from "@/components/ui/animated-gradient-text";
@@ -45,11 +46,14 @@ export function Hero() {
 
           <div className="relative mt-16 rounded-xl overflow-hidden shadow-2xl border">
             <BorderBeam size={200} duration={12} delay={5} />
-            <img
+            <Image
               src={heroImage}
               alt="Manim mathematical animation demonstration"
+              width={1200}
+              height={675}
               className="w-full h-auto"
               data-testid="img-hero-demo"
+              priority
             />
           </div>
         </div>

@@ -15,6 +15,13 @@ import { prisma } from "@/lib/prisma";
 import { scriptGenerationSchema, systemInstruction } from "./constants";
 import { generateUniqueId, readableStreamToBuffer, retryWithBackoff } from "./utils";
 
+// Type for AI response
+type AIScriptResponse = {
+  title?: string;
+  explanation?: string;
+  scenes?: unknown[];
+};
+
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 const ENABLE_TTS = process.env.ENABLE_TTS === "true";
 const DEFAULT_TEST_AUDIO_URL =
@@ -155,10 +162,10 @@ export async function generateScriptForPrompt(prompt: PromptModel): Promise<Scri
     throw new Error("Empty response from AI");
   }
 
-  let parsed: any;
+  let parsed: AIScriptResponse;
 
   try {
-    parsed = JSON.parse(rawText);
+    parsed = JSON.parse(rawText) as AIScriptResponse;
   } catch (error) {
     throw new Error(
       `Failed to parse AI response as JSON: ${(error as Error).message}`
