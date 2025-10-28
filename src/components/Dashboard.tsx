@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Loader2 } from "lucide-react";
-// import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // TODO: Uncomment when API routes are ready
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 
 interface Video {
@@ -15,40 +15,38 @@ interface Video {
   title: string;
   prompt: string;
   createdAt: string;
+  videoUrl: string | null;
 }
 
 export function Dashboard() {
   const [prompt, setPrompt] = useState("");
-  // const queryClient = useQueryClient(); // TODO: Uncomment when API routes are ready
+  const queryClient = useQueryClient();
 
-  // TODO: Uncomment when /api/videos route is implemented
-  // const { data: videos = [], isLoading } = useQuery<Video[]>({
-  //   queryKey: ["/api/videos"],
-  // });
-  const videos: Video[] = [];
-  const isLoading = false;
+  const { data: videos = [], isLoading } = useQuery<Video[]>({
+    queryKey: ["/api/videos"],
+    queryFn: async () => {
+      const res = await fetch("/api/videos");
+      if (!res.ok) throw new Error("Failed to fetch videos");
+      return res.json();
+    },
+  });
 
-  // TODO: Uncomment when /api/generate route is fully implemented
-  // const generateMutation = useMutation({
-  //   mutationFn: async (prompt: string) => {
-  //     const res = await fetch("/api/generate", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       credentials: "include",
-  //       body: JSON.stringify({ prompt }),
-  //     });
-  //     if (!res.ok) throw new Error("Failed to generate");
-  //     return res.json();
-  //   },
-  //   onSuccess: () => {
-  //     queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
-  //     setPrompt("");
-  //   },
-  // });
-  const generateMutation = {
-    mutate: (prompt: string) => console.log("Generate:", prompt),
-    isPending: false,
-  };
+  const generateMutation = useMutation({
+    mutationFn: async (prompt: string) => {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ prompt }),
+      });
+      if (!res.ok) throw new Error("Failed to generate");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
+      setPrompt("");
+    },
+  });
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;

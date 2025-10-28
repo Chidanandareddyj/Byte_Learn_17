@@ -3,6 +3,7 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   Audio as AudioModel,
+  Mux as MuxModel,
   Prompt as PromptModel,
   Script as ScriptModel,
   User as UserModel,
@@ -90,7 +91,7 @@ export type VideoGenerationResult = {
 };
 
 export type MuxGenerationResult = {
-  videoRecord: VideoModel;
+  videoRecord: MuxModel;
   finalVideoUrl: string;
   message: string;
 };
@@ -111,6 +112,7 @@ export async function createPromptForUser(
     data: {
       promptId: generateUniqueId(),
       prompt: promptText,
+      clerkId: clerkIdValue, // FIX: Associate prompt with the user's clerkId
     },
   });
 
@@ -397,9 +399,9 @@ export async function muxMediaForPrompt(
     throw new Error("Muxing response missing combined_url");
   }
 
-  const videoRecord = await prisma.video.create({
+  const videoRecord = await prisma.mux.create({
     data: {
-      videoUrl: finalVideoUrl,
+      finalvideoUrl: finalVideoUrl,
       promptId: prompt.id,
     },
   });
