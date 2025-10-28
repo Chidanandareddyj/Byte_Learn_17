@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { VideoCard } from "@/components/VideoCard";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface Video {
 export function Dashboard() {
   const [prompt, setPrompt] = useState("");
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data: videos = [], isLoading } = useQuery<Video[]>({
     queryKey: ["/api/videos"],
@@ -42,9 +44,13 @@ export function Dashboard() {
       if (!res.ok) throw new Error("Failed to generate");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       setPrompt("");
+      // Redirect to learn page with the promptId
+      if (data.promptId) {
+        router.push(`/learn?id=${data.promptId}`);
+      }
     },
   });
 
@@ -123,7 +129,7 @@ export function Dashboard() {
                     key={video.id}
                     id={video.id}
                     title={video.title}
-                    thumbnail={"/generated_images/Manim_math_animation_demo_14bc8a1a.png"}
+                    videoUrl={video.videoUrl}
                     date={formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
                   />
                 ))}

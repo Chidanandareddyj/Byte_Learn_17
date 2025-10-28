@@ -6,20 +6,27 @@ import Link from "next/link";
 interface VideoCardProps {
   id: string;
   title: string;
-  thumbnail: string;
+  videoUrl: string | null;
   date: string;
 }
 
-export function VideoCard({ id, title, thumbnail, date }: VideoCardProps) {
+export function VideoCard({ id, title, videoUrl, date }: VideoCardProps) {
   return (
     <Card className="overflow-hidden hover-elevate transition-all group">
       <div className="relative aspect-video bg-muted">
-        <img
-          src={thumbnail}
-          alt={title}
-          className="w-full h-full object-cover"
-          data-testid={`img-video-${id}`}
-        />
+        {videoUrl ? (
+          <video
+            src={videoUrl}
+            className="w-full h-full object-cover"
+            data-testid={`img-video-${id}`}
+            muted
+            playsInline
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <p className="text-muted-foreground">No video available</p>
+          </div>
+        )}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <Link href={`/learn?id=${id}`}>
             <Button size="icon" className="h-14 w-14 rounded-full" data-testid={`button-play-${id}`}>
@@ -37,7 +44,17 @@ export function VideoCard({ id, title, thumbnail, date }: VideoCardProps) {
               View
             </Button>
           </Link>
-          <Button size="sm" variant="outline" onClick={() => console.log("Download", id)} data-testid={`button-download-${id}`}>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => {
+              if (videoUrl) {
+                window.open(videoUrl, '_blank');
+              }
+            }} 
+            data-testid={`button-download-${id}`}
+            disabled={!videoUrl}
+          >
             <Download className="h-4 w-4" />
           </Button>
         </div>
