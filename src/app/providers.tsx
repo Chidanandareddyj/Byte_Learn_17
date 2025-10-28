@@ -21,9 +21,9 @@ export function useTheme(): ThemeContextType {
 
 function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = React.useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
+    if (typeof window === "undefined") return "dark";
     const stored = window.localStorage.getItem("theme") as Theme | null;
-    return stored ?? "light";
+    return stored ?? "dark";
   });
 
   React.useEffect(() => {
