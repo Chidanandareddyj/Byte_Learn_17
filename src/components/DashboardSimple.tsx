@@ -14,6 +14,7 @@ interface Video {
   title: string;
   prompt: string;
   createdAt: string;
+  videoUrl: string | null;
 }
 
 export function DashboardSimple() {
@@ -85,7 +86,7 @@ export function DashboardSimple() {
                   Create New Learning
                 </CardTitle>
                 <CardDescription>
-                  Describe what you want to learn and we'll create a visual explanation
+                  Describe what you want to learn and we&apos;ll create a visual explanation
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -148,7 +149,7 @@ export function DashboardSimple() {
                     key={video.id}
                     id={video.id}
                     title={video.title}
-                    thumbnail={"/generated_images/Manim_math_animation_demo_14bc8a1a.png"}
+                    videoUrl={video.videoUrl}
                     date={formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
                   />
                 ))}

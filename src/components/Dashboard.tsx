@@ -82,7 +82,7 @@ export function Dashboard() {
                     Create New Learning
                   </CardTitle>
                   <CardDescription>
-                    Describe what you want to learn and we'll create a visual explanation
+                    Describe what you want to learn and we&apos;ll create a visual explanation
                   </CardDescription>
                 </CardHeader>
               <CardContent className="space-y-4">
