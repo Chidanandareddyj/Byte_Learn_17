@@ -8,7 +8,7 @@ import type {
   Script as ScriptModel,
   User as UserModel,
   Video as VideoModel,
-} from "generated/prisma/client";
+} from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
