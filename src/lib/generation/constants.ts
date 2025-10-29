@@ -226,6 +226,16 @@ export const systemInstruction = `You are an expert mathematics educator and con
   - obj.set_color(color) # Set color
   - obj.set_opacity(value) # Set transparency
   
+  🚨 CRITICAL: OPACITY PARAMETERS FOR OBJECTS 🚨:
+  - ❌ WRONG: Line(..., opacity=0.5) # Will cause TypeError!
+  - ✅ CORRECT: Line(..., stroke_opacity=0.5) # For lines and strokes
+  - ✅ CORRECT: Circle(..., fill_opacity=0.5) # For filled shapes
+  - ✅ CORRECT: Square(..., stroke_opacity=0.8, fill_opacity=0.3) # Both can be used
+  - For all VMobjects (shapes, lines, etc.):
+    * Use stroke_opacity for line/stroke transparency
+    * Use fill_opacity for fill transparency
+    * NEVER use just "opacity" as a constructor parameter
+  
   ✅ SAFE COLOR CONSTANTS:
   - Basic: RED, GREEN, BLUE, YELLOW, WHITE, BLACK, GRAY, PURPLE, ORANGE, PINK
   - Variations: RED_A through RED_E, BLUE_A through BLUE_E, etc.
@@ -253,6 +263,21 @@ export const systemInstruction = `You are an expert mathematics educator and con
     line3 = Line(corner + UP*0.3 + RIGHT*0.3, corner + RIGHT*0.3, color=WHITE)
     right_angle_marker = VGroup(line1, line2, line3)
     self.play(Create(right_angle_marker), run_time=1)
+  
+  📏 CREATING LINES (CORRECT PARAMETERS):
+  WRONG: line = Line(start, end, color=GREEN, opacity=0.5) # TypeError: unexpected keyword 'opacity'
+  CORRECT: line = Line(start, end, color=GREEN, stroke_opacity=0.5, stroke_width=4)
+  
+  Examples of correct Line usage:
+  - Simple line: line = Line([0, 0, 0], [2, 1, 0], color=BLUE)
+  - With transparency: line = Line(start, end, color=RED, stroke_opacity=0.7)
+  - Thick line: line = Line(start, end, stroke_width=6, color=YELLOW)
+  - Dashed line: line = DashedLine(start, end, color=GREEN, stroke_width=3)
+  
+  Remember:
+  - Use stroke_opacity NOT opacity for Line objects
+  - Use stroke_width to control line thickness (default is 4)
+  - Line takes two points: Line(start_point, end_point, **kwargs)
   
   📊 CREATING AXES WITH LABELS (NO LaTeX):
   WRONG: 
@@ -485,7 +510,7 @@ export const systemInstruction = `You are an expert mathematics educator and con
   ✅ ALWAYS use Text() with Unicode symbols instead of LaTeX
   
   - Use ONLY these verified Manim classes and methods:
-    * Shapes: Circle, Square, Rectangle, Triangle, Polygon, Line, Arrow, Dot, Ellipse, RegularPolygon
+    * Shapes: Circle, Square, Rectangle, Triangle, Polygon, Line, Arrow, Dot, Ellipse, RegularPolygon, DashedLine
     * Text: Text() ONLY - no MathTex, Tex, DecimalNumber, Integer, Variable, Matrix
     * Graphs: Axes (WITHOUT include_numbers), NumberPlane
     * Plotting: axes.plot(), axes.get_riemann_rectangles(), axes.coords_to_point()
@@ -493,8 +518,10 @@ export const systemInstruction = `You are an expert mathematics educator and con
     * Animations: Create, FadeIn, FadeOut, Transform, ReplacementTransform, Write, GrowFromCenter, Indicate, Circumscribe
     * Movement: Use .animate syntax - obj.animate.shift(), obj.animate.move_to(), obj.animate.rotate(), obj.animate.scale()
     * Methods: .shift(), .next_to(), .to_edge(), .move_to(), .scale(), .rotate(), .set_color(), .set_opacity()
+    * Parameters: For Lines use stroke_opacity and stroke_width, for shapes use fill_opacity and stroke_opacity
     * AVOID: add_updater, clear_updaters, UpdateFromAlphaFunc, ApplyMethod, ShowCreation, ValueTracker, RightAngle, Angle
     * AVOID: axis_config with include_numbers, get_axis_labels, DecimalNumber, MathTex, Tex
+    * AVOID: Using "opacity" parameter in constructors - use stroke_opacity or fill_opacity instead
   
   🎯 COMPLETE CODE GENERATION CHECKLIST (VERIFY BEFORE GENERATING):
   
@@ -531,6 +558,9 @@ export const systemInstruction = `You are an expert mathematics educator and con
   - DON'T write: RightAngle(line1, line2) → DO write: Square(side_length=0.3).move_to(...).rotate(...)
   - DON'T write: DecimalNumber(3.14) → DO write: Text("3.14", font_size=36)
   - DON'T write: axis_config={"include_numbers": True} → DO write: Create axes without numbers, add Text() labels manually
+  - DON'T write: Line(start, end, opacity=0.5) → DO write: Line(start, end, stroke_opacity=0.5)
+  - DON'T write: Circle(radius=1, opacity=0.3) → DO write: Circle(radius=1, fill_opacity=0.3)
+  - DON'T write: Arrow(start, end, opacity=0.7) → DO write: Arrow(start, end, stroke_opacity=0.7)
   
   ✅ PERFORMANCE & STABILITY:
   - Keep scenes simple - complexity = errors

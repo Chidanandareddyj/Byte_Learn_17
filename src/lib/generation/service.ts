@@ -1,5 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { GoogleGenAI, Modality } from "@google/genai";
+// import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   Audio as AudioModel,
@@ -13,7 +13,7 @@ import type {
 import { prisma } from "@/lib/prisma";
 
 import { scriptGenerationSchema, systemInstruction } from "./constants";
-import { generateUniqueId, readableStreamToBuffer, retryWithBackoff } from "./utils";
+import { generateUniqueId, retryWithBackoff, createWavFile } from "./utils";
 
 // Type for AI response
 type AIScriptResponse = {
@@ -29,7 +29,7 @@ const DEFAULT_TEST_AUDIO_URL =
   "https://geruuvhlyduaoelpwqbj.supabase.co/storage/v1/object/public/audio/1761579733647-c21w24i.mp3";
 
 let aiClient: GoogleGenAI | null = null;
-let elevenLabsClient: ElevenLabsClient | null = null;
+// let elevenLabsClient: ElevenLabsClient | null = null;
 let supabaseClient: SupabaseClient | null = null;
 
 function getGoogleClient(): GoogleGenAI {
@@ -44,17 +44,17 @@ function getGoogleClient(): GoogleGenAI {
   return aiClient;
 }
 
-function getElevenLabsClient(): ElevenLabsClient {
-  if (!elevenLabsClient) {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    if (!apiKey) {
-      throw new Error("ELEVENLABS_API_KEY environment variable is not configured.");
-    }
-    elevenLabsClient = new ElevenLabsClient({ apiKey });
-  }
+// function getElevenLabsClient(): ElevenLabsClient {
+//   if (!elevenLabsClient) {
+//     const apiKey = process.env.ELEVENLABS_API_KEY;
+//     if (!apiKey) {
+//       throw new Error("ELEVENLABS_API_KEY environment variable is not configured.");
+//     }
+//     elevenLabsClient = new ElevenLabsClient({ apiKey });
+//   }
 
-  return elevenLabsClient;
-}
+//   return elevenLabsClient;
+// }
 
 function getSupabaseClient(): SupabaseClient {
   if (!supabaseClient) {
@@ -124,6 +124,33 @@ export async function createPromptForUser(
   });
 
   return { user, prompt };
+}
+
+export async function generateSpeech(text: string): Promise<{ data: string; mimeType: string }> {
+  const ai = getGoogleClient();
+  
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash-preview-tts",
+    contents: [{ parts: [{ text: text }] }],
+    config: {
+      responseModalities: [Modality.AUDIO],
+      speechConfig: {
+        voiceConfig: {
+          prebuiltVoiceConfig: { voiceName: 'Kore' }, // Using a neutral voice
+        },
+      },
+    },
+  });
+
+  const inlineData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+  const base64Audio = inlineData?.data;
+  const mimeType = inlineData?.mimeType ?? "audio/wav";
+  
+  if (!base64Audio) {
+    throw new Error("Failed to generate audio from the API.");
+  }
+  
+  return { data: base64Audio, mimeType };
 }
 
 export function getPromptByPublicId(promptId: string): Promise<PromptModel | null> {
@@ -240,25 +267,54 @@ export async function generateAudioForPrompt(
   let usedTestAudio = false;
 
   if (ENABLE_TTS) {
-    const elevenlabs = getElevenLabsClient();
+    // Comment out Eleven Labs implementation
+    // const elevenlabs = getElevenLabsClient();
     const supabase = getSupabaseClient();
 
-    const audioStream = await elevenlabs.textToSpeech.convert(
-      "JBFqnCBsd6RMkjVDRZzb",
-      {
-        text: narration,
-        modelId: "eleven_multilingual_v2",
-        outputFormat: "mp3_44100_128",
-      }
-    );
-
-    const audioBuffer = await readableStreamToBuffer(audioStream);
-    const audioFileName = `${scriptRecord.scriptId}.mp3`;
+    // Use Gemini TTS instead
+    const { data: base64Audio, mimeType } = await generateSpeech(narration);
+    
+    console.log(`[TTS] Received audio with mimeType: ${mimeType}`);
+    
+    // Convert base64 to buffer
+    let audioBuffer: Buffer = Buffer.from(base64Audio, 'base64');
+    
+    // Check if the audio data has a WAV header (starts with "RIFF")
+    const hasWavHeader = audioBuffer.length >= 4 && 
+                        audioBuffer.toString('ascii', 0, 4) === 'RIFF';
+    
+    if (!hasWavHeader) {
+      console.log('[TTS] No WAV header detected, adding WAV header to PCM data');
+      // If no header, assume it's raw PCM and add WAV header
+      // Gemini TTS typically outputs 24kHz, mono, 16-bit PCM
+      audioBuffer = createWavFile(audioBuffer, 24000, 1, 16);
+    } else {
+      console.log('[TTS] WAV header detected in audio data');
+    }
+    
+    // Gemini TTS returns audio/wav format, so use .wav extension
+    // Determine file extension based on mime type
+    let fileExtension = 'wav';  // Default to wav for Gemini TTS
+    let contentType = mimeType;
+    
+    if (mimeType.includes('mpeg') || mimeType.includes('mp3')) {
+      fileExtension = 'mp3';
+    } else if (mimeType.includes('wav') || mimeType.includes('wave')) {
+      fileExtension = 'wav';
+      contentType = 'audio/wav';
+    } else {
+      // For unknown types, default to wav
+      console.warn(`[TTS] Unknown mimeType: ${mimeType}, defaulting to wav`);
+      contentType = 'audio/wav';
+    }
+    
+    const audioFileName = `${scriptRecord.scriptId}.${fileExtension}`;
+    console.log(`[TTS] Uploading audio as: ${audioFileName} with contentType: ${contentType}, size: ${audioBuffer.length} bytes`);
 
     const { error: uploadError } = await supabase.storage
       .from("audio")
       .upload(audioFileName, audioBuffer, {
-        contentType: "audio/mpeg",
+        contentType: contentType,
         upsert: true,
       });
 
