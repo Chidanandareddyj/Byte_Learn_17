@@ -2,11 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Particles } from "@/components/ui/particles";
-import { RetroGrid } from "@/components/ui/retro-grid";
-import { BorderBeam } from "@/components/ui/border-beam";
-import { AnimatedList } from "@/components/ui/animated-list";
-import { AnimatedCircularProgressBar } from "@/components/ui/animated-circular-progress-bar";
+import { AnimatedGradientText } from "@/components/ui/animated-gradient-text";
 import {
   Card,
   CardHeader,
@@ -14,7 +10,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Brain, Loader2, Sparkles, Video, Wand2 } from "lucide-react";
+import { BookOpen, PenTool, Play, CheckCircle, Sparkles } from "lucide-react";
 
 interface LoadingScreenProps {
   prompt?: string;
@@ -24,32 +20,32 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
   const steps = useMemo(
     () => [
       {
-        id: "analysis",
-        icon: Brain,
-        label: "Understanding your brief",
-        hint: "Parsing the prompt to pick out story beats",
-        duration: 22,
+        id: "analyze",
+        icon: BookOpen,
+        label: "Analyzing concept",
+        hint: "Breaking down your learning prompt into key ideas",
+        duration: 25,
       },
       {
-        id: "ideation",
-        icon: Wand2,
-        label: "Sketching scene ideas",
-        hint: "Selecting visuals, camera moves, and pacing",
+        id: "design",
+        icon: PenTool,
+        label: "Designing visuals",
+        hint: "Creating mathematical animations and diagrams",
+        duration: 35,
+      },
+      {
+        id: "animate",
+        icon: Play,
+        label: "Building animation",
+        hint: "Rendering smooth transitions and explanations",
         duration: 30,
       },
       {
-        id: "render",
-        icon: Video,
-        label: "Rendering motion visuals",
-        hint: "Animating frames and syncing narration cues",
-        duration: 28,
-      },
-      {
-        id: "polish",
-        icon: Sparkles,
-        label: "Polishing the final cut",
-        hint: "Balancing audio, colors, and transitions",
-        duration: 20,
+        id: "finalize",
+        icon: CheckCircle,
+        label: "Finalizing lesson",
+        hint: "Adding narration and polishing the presentation",
+        duration: 10,
       },
     ],
     [],
@@ -74,9 +70,9 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
           clearInterval(interval);
           return 100;
         }
-        return Math.min(prev + 0.5, 100);
+        return Math.min(prev + 0.4, 100);
       });
-    }, 1000);
+    }, 800);
 
     return () => clearInterval(interval);
   }, []);
@@ -99,26 +95,13 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
     });
   }, [currentStep]);
 
-  const CurrentIcon = steps[currentStep]?.icon ?? Brain;
+  const CurrentIcon = steps[currentStep]?.icon ?? BookOpen;
   const displayedProgress = Math.round(progress);
   const safeHistory = history.filter((index) => steps[index]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur">
-      <RetroGrid
-        className="opacity-30"
-        lightLineColor="#6b7280"
-        darkLineColor="#1f2937"
-        cellSize={70}
-      />
-      <Particles
-        className="absolute inset-0"
-        quantity={120}
-        ease={80}
-        color="#38bdf8"
-        refresh={false}
-      />
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center notebook-bg">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
       <div className="relative z-10 w-full max-w-4xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -126,61 +109,63 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
           transition={{ duration: 0.5 }}
           className="relative"
         >
-          <Card className="overflow-hidden border border-border/60 bg-card/95 shadow-xl">
-            <BorderBeam size={220} duration={15} delay={4} className="opacity-50" />
-            <CardHeader className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-3">
-                <CardTitle className="flex items-center gap-3 text-2xl font-semibold">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/80 bg-muted/40">
-                    <CurrentIcon className="h-6 w-6 text-sky-500" />
-                  </span>
-                  Crafting your video
-                </CardTitle>
-                <CardDescription className="max-w-xl text-sm text-muted-foreground">
-                  We are walking through a four-step build to produce the best possible render. Sit tight—this usually wraps in just a few minutes.
-                </CardDescription>
-                {prompt && (
-                  <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm">
-                    <span className="mb-1 block text-xs uppercase tracking-wide text-muted-foreground">
-                      Prompt snapshot
-                    </span>
-                    <p className="leading-relaxed text-foreground/90">{prompt}</p>
-                  </div>
-                )}
+          <Card className="overflow-hidden border-2 shadow-2xl">
+            <CardHeader className="text-center space-y-4 pb-8">
+              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <CurrentIcon className="w-8 h-8 text-primary" />
               </div>
-              <AnimatedCircularProgressBar
-                value={progress}
-                gaugePrimaryColor="#0ea5e9"
-                gaugeSecondaryColor="#1f2937"
-                className="mx-auto md:mx-0"
-              />
+              <div className="space-y-2">
+                <CardTitle className="text-3xl font-serif">
+                  Crafting your{" "}
+                  <AnimatedGradientText
+                    className="text-3xl font-serif"
+                    colorFrom="#a3d9a1"
+                    colorTo="#3b8c5a"
+                    speed={2}
+                  >
+                    visual lesson
+                  </AnimatedGradientText>
+                </CardTitle>
+                <CardDescription className="text-lg max-w-2xl mx-auto">
+                  Transforming your prompt into an engaging mathematical animation with step-by-step explanations
+                </CardDescription>
+              </div>
+              {prompt && (
+                <div className="max-w-2xl mx-auto rounded-lg border bg-muted/50 p-4">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-2">
+                    Learning prompt
+                  </span>
+                  <p className="text-sm leading-relaxed text-foreground/90">{prompt}</p>
+                </div>
+              )}
             </CardHeader>
+
             <CardContent className="space-y-8">
-              <section className="space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {steps[currentStep]?.label ?? "Working"}
+                    <p className="text-lg font-semibold text-foreground">
+                      {steps[currentStep]?.label ?? "Preparing"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {steps[currentStep]?.hint}
                     </p>
                   </div>
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {displayedProgress}% complete
+                  <span className="text-2xl font-bold text-primary">
+                    {displayedProgress}%
                   </span>
                 </div>
-                <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                <div className="relative h-3 overflow-hidden rounded-full bg-muted">
                   <motion.div
-                    className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-400"
+                    className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
                     initial={{ width: "0%" }}
                     animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                    transition={{ duration: 0.8, ease: "easeInOut" }}
                   />
                 </div>
-              </section>
+              </div>
 
-              <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {steps.map((step, index) => {
                   const StepIcon = step.icon;
                   const isActive = index === currentStep;
@@ -199,111 +184,116 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
                       key={step.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`rounded-xl border px-4 py-3 transition-all ${
+                      transition={{ delay: index * 0.1 }}
+                      className={`rounded-xl border-2 p-4 transition-all ${
                         isActive
-                          ? "border-sky-500/70 bg-sky-500/10"
+                          ? "border-primary bg-primary/5 shadow-lg"
                           : isComplete
-                          ? "border-emerald-500/70 bg-emerald-500/10"
-                          : "border-border/60 bg-muted/30"
+                          ? "border-secondary bg-secondary/5"
+                          : "border-muted bg-card/50"
                       }`}
                     >
-                      <div className="mb-3 flex items-center gap-3">
-                        <span
-                          className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm ${
+                      <div className="text-center space-y-3">
+                        <div
+                          className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
                             isActive
-                              ? "border-sky-500 bg-sky-500/15 text-sky-500"
+                              ? "bg-primary text-primary-foreground"
                               : isComplete
-                              ? "border-emerald-500 bg-emerald-500/15 text-emerald-500"
-                              : "border-border/60 bg-muted text-muted-foreground"
+                              ? "bg-secondary text-secondary-foreground"
+                              : "bg-muted text-muted-foreground"
                           }`}
                         >
-                          {isActive ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : isComplete ? (
-                            <Sparkles className="h-5 w-5" />
+                          {isComplete ? (
+                            <CheckCircle className="w-6 h-6" />
                           ) : (
-                            <StepIcon className="h-5 w-5" />
+                            <StepIcon className="w-6 h-6" />
                           )}
-                        </span>
+                        </div>
                         <div>
-                          <p className="text-sm font-medium leading-tight text-foreground">
+                          <p className="font-semibold text-sm leading-tight">
                             {step.label}
                           </p>
-                          <p className="text-xs text-muted-foreground">{step.hint}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {step.hint}
+                          </p>
                         </div>
-                      </div>
-                      <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-                        <motion.div
-                          className={`h-full rounded-full ${
-                            isComplete
-                              ? "bg-emerald-500"
-                              : isActive
-                              ? "bg-sky-500"
-                              : "bg-muted-foreground/30"
-                          }`}
-                          initial={{ width: 0 }}
-                          animate={{
-                            width: `${
+                        <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+                          <motion.div
+                            className={`h-full rounded-full transition-colors ${
                               isComplete
-                                ? 100
+                                ? "bg-secondary"
                                 : isActive
-                                ? relativeProgress
-                                : 0
-                            }%`,
-                          }}
-                          transition={{ duration: 0.4, ease: "easeInOut" }}
-                        />
+                                ? "bg-primary"
+                                : "bg-muted-foreground/30"
+                            }`}
+                            initial={{ width: 0 }}
+                            animate={{
+                              width: `${
+                                isComplete
+                                  ? 100
+                                  : isActive
+                                  ? relativeProgress
+                                  : 0
+                              }%`,
+                            }}
+                            transition={{ duration: 0.6, ease: "easeInOut" }}
+                          />
+                        </div>
                       </div>
                     </motion.div>
                   );
                 })}
-              </section>
+              </div>
 
-              <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-                <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-5">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Build log
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-3 rounded-lg border bg-muted/30 p-5">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Progress log
                   </p>
-                  <AnimatedList className="items-stretch gap-3">
+                  <div className="space-y-3">
                     {safeHistory.map((index) => {
                       const step = steps[index];
                       const StepIcon = step.icon;
                       return (
                         <div
                           key={step.id}
-                          className="flex w-full items-start gap-3 rounded-md border border-border/50 bg-background/90 px-4 py-3 shadow-sm"
+                          className="flex items-start gap-3 rounded-md border bg-background/80 px-4 py-3 shadow-sm"
                         >
-                          <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                            <StepIcon className="h-4 w-4 text-sky-500" />
-                          </span>
-                          <div className="space-y-1 text-sm">
-                            <p className="font-medium text-foreground">{step.label}</p>
+                          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                            <StepIcon className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <p className="font-medium text-sm">{step.label}</p>
                             <p className="text-xs text-muted-foreground">
                               {index < currentStep
-                                ? "Completed"
+                                ? "✓ Completed"
                                 : index === currentStep
-                                ? "In progress"
-                                : "Queued"}
+                                ? "⟳ In progress"
+                                : "○ Queued"}
                             </p>
                           </div>
+                          {index < currentStep && (
+                            <Sparkles className="h-4 w-4 text-secondary mt-0.5" />
+                          )}
                         </div>
                       );
                     })}
-                  </AnimatedList>
+                  </div>
                 </div>
-                <div className="flex h-full flex-col justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 p-5 text-sm text-muted-foreground">
+                <div className="flex flex-col justify-between gap-4 rounded-lg border bg-muted/30 p-5">
                   <div>
-                    <p className="text-xs uppercase tracking-wide">What happens next?</p>
-                    <p className="mt-2 leading-relaxed">
-                      Once the render finishes we will notify you inside the dashboard and send an email with the playback link. Feel free to explore other lessons while this wraps up.
+                    <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                      What&apos;s happening?
+                    </p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      We&apos;re using Manim to create beautiful mathematical animations that make complex concepts easy to understand. Your lesson will be ready for interactive learning soon.
                     </p>
                   </div>
                   <p className="text-xs italic text-muted-foreground/80">
-                    Heads-up: keeping this tab open helps us keep your session warm so the export moves a little faster.
+                    💡 Pro tip: Keep this tab open for the fastest processing. We&apos;ll notify you when your visual lesson is complete!
                   </p>
                 </div>
-              </section>
+              </div>
             </CardContent>
           </Card>
         </motion.div>

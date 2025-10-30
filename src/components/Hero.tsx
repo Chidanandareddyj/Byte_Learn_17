@@ -18,8 +18,8 @@ export function Hero() {
             Learn concepts visually,{" "}
             <AnimatedGradientText
               className="text-5xl md:text-6xl lg:text-7xl font-bold"
-              colorFrom="#60a5fa"
-              colorTo="#a855f7"
+              colorFrom="#a3d9a1"
+              colorTo="#3b8c5a"
               speed={1.5}
             >
               one byte at a time

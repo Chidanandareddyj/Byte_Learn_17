@@ -226,15 +226,12 @@ export const systemInstruction = `You are an expert mathematics educator and con
   - obj.set_color(color) # Set color
   - obj.set_opacity(value) # Set transparency
   
-  🚨 CRITICAL: OPACITY PARAMETERS FOR OBJECTS 🚨:
-  - ❌ WRONG: Line(..., opacity=0.5) # Will cause TypeError!
-  - ✅ CORRECT: Line(..., stroke_opacity=0.5) # For lines and strokes
-  - ✅ CORRECT: Circle(..., fill_opacity=0.5) # For filled shapes
-  - ✅ CORRECT: Square(..., stroke_opacity=0.8, fill_opacity=0.3) # Both can be used
-  - For all VMobjects (shapes, lines, etc.):
-    * Use stroke_opacity for line/stroke transparency
-    * Use fill_opacity for fill transparency
-    * NEVER use just "opacity" as a constructor parameter
+  🚨 CRITICAL: CONSTRUCTOR PARAMETERS 🚨
+  - ❌ NEVER pass rotation parameters in object constructors - they don't exist
+  - ❌ Rectangle(width=8, height=8, rotate_about_z=0) - INVALID!
+  - ✅ CORRECT: Rectangle(width=8, height=8).rotate(0)
+  - ✅ CORRECT: Create object, then apply transformations separately
+  - Only use documented constructor parameters: width, height, color, fill_color, stroke_color, fill_opacity, stroke_opacity, stroke_width, etc.
   
   ✅ SAFE COLOR CONSTANTS:
   - Basic: RED, GREEN, BLUE, YELLOW, WHITE, BLACK, GRAY, PURPLE, ORANGE, PINK
@@ -439,6 +436,14 @@ export const systemInstruction = `You are an expert mathematics educator and con
   - ✅ ALWAYS use Text() for ALL text including math formulas
   - ✅ For math: Use Text("x² + 2x + 1") or Text("∫ f(x) dx") with Unicode symbols
   
+  🚨 CRITICAL: NO NON-EXISTENT ATTRIBUTES 🚨
+  - ❌ NEVER use rotate_about_z - Rectangle and other objects don't have this attribute
+  - ❌ NEVER use rotate_about_x, rotate_about_y - Not valid Manim methods
+  - ❌ NEVER pass rotation parameters in constructors - Create object first, then rotate
+  - ✅ CORRECT: obj = Rectangle(...); obj.rotate(angle)
+  - ✅ CORRECT: obj = Rectangle(...).rotate(angle)
+  - ✅ CORRECT: self.play(obj.animate.rotate(angle), run_time=2)
+  
   📚 COMPLETE UNICODE MATH SYMBOLS REFERENCE:
   
   Superscripts (exponents):
@@ -522,6 +527,7 @@ export const systemInstruction = `You are an expert mathematics educator and con
     * AVOID: add_updater, clear_updaters, UpdateFromAlphaFunc, ApplyMethod, ShowCreation, ValueTracker, RightAngle, Angle
     * AVOID: axis_config with include_numbers, get_axis_labels, DecimalNumber, MathTex, Tex
     * AVOID: Using "opacity" parameter in constructors - use stroke_opacity or fill_opacity instead
+    * AVOID: rotate_about_z, rotate_about_x, rotate_about_y - these are not valid Manim attributes
   
   🎯 COMPLETE CODE GENERATION CHECKLIST (VERIFY BEFORE GENERATING):
   
@@ -561,6 +567,7 @@ export const systemInstruction = `You are an expert mathematics educator and con
   - DON'T write: Line(start, end, opacity=0.5) → DO write: Line(start, end, stroke_opacity=0.5)
   - DON'T write: Circle(radius=1, opacity=0.3) → DO write: Circle(radius=1, fill_opacity=0.3)
   - DON'T write: Arrow(start, end, opacity=0.7) → DO write: Arrow(start, end, stroke_opacity=0.7)
+  - DON'T write: Rectangle(..., rotate_about_z=0) → DO write: Rectangle(...).rotate(0)
   
   ✅ PERFORMANCE & STABILITY:
   - Keep scenes simple - complexity = errors
@@ -685,6 +692,7 @@ export const systemInstruction = `You are an expert mathematics educator and con
   6. Manual labels for axes - Never axis_config include_numbers, get_axis_labels
   7. Simple shapes - Never complex geometry like RightAngle, Angle
   8. Verified methods only - If you haven't seen it in examples above, DON'T USE IT
+  9. No non-existent attributes - Never rotate_about_z, rotate_about_x, rotate_about_y
   
   WHEN IN DOUBT:
   - Use the simplest possible approach
