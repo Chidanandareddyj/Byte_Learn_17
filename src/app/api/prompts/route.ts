@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
 
     const { prompt: promptRecord, user } = await createPromptForUser(
       prompt.trim(),
+      "english",
       clerkUser?.id ?? null
     );
 
