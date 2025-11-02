@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const prompt: string | undefined = body?.prompt;
+    const language: string = body?.language ?? "english";
 
     if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       return NextResponse.json(
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
 
     const workflow = await runGenerationWorkflow({
       promptText: prompt.trim(),
+      language: language,
       clerkId: clerkUser?.id ?? null,
     });
 

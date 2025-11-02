@@ -100,9 +100,9 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
   const safeHistory = history.filter((index) => steps[index]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center notebook-bg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center notebook-bg overflow-y-auto">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
-      <div className="relative z-10 w-full max-w-4xl px-6">
+      <div className="relative z-10 w-full max-w-5xl px-6 py-8">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}

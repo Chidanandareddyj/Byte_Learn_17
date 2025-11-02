@@ -5,7 +5,7 @@ import { BorderBeam } from "@/components/ui/border-beam";
 import { AnimatedGradientText } from "@/components/ui/animated-gradient-text";
 import { RetroGrid } from "@/components/ui/retro-grid";
 // Use public/ path directly to avoid bundling issues with images
-const heroImage = "/generated_images/Manim_math_animation_demo_14bc8a1a.png";
+const heroImage = "/thumbnail.png";
 import { ArrowRight } from "lucide-react";
 
 export function Hero() {
@@ -27,7 +27,8 @@ export function Hero() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-            Transform your learning prompts into stunning visual explanations with AI-generated Manim animations and synchronized narration.
+            Transform your learning prompts into stunning visual explanations with AI-generated Manim animations and synchronized narration in{" "}
+            <span className="font-semibold text-primary">9 Indian languages</span>.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">

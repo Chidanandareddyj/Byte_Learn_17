@@ -137,41 +137,76 @@ export function LearningPage() {
             <Card className="sticky top-24">
               <div className="p-6 border-b">
                 <h2 className="text-xl font-bold" data-testid="text-explanation-title">{video.title}</h2>
+                <p className="text-sm text-muted-foreground mt-1">Generated explanation</p>
               </div>
               <ScrollArea className="h-[calc(100vh-16rem)]">
-                <div className="p-6 space-y-4">
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    {video.explanation.split('\n\n').map((paragraph: string, index: number) => {
-                      // Check if paragraph starts with a scene marker
-                      const sceneMatch = paragraph.match(/^\[Scene (\d+)\]/);
-                      
-                      if (sceneMatch) {
-                        const sceneNumber = sceneMatch[1];
-                        const content = paragraph.replace(/^\[Scene \d+\]\n?/, '');
-                        
-                        return (
-                          <div key={index} className="mb-6" data-testid={`section-scene-${sceneNumber}`}>
-                            <div className="flex items-start gap-3">
-                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-                                {sceneNumber}
-                              </div>
-                              <div className="flex-1 pt-0.5">
-                                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                                  {content}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      
-                      // Regular paragraph
-                      return (
-                        <p key={index} className="text-muted-foreground leading-relaxed whitespace-pre-line mb-4">
-                          {paragraph}
+                <div className="p-6">
+                  <div className="space-y-6">
+                    {/* Original Prompt */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        Your Prompt
+                      </h3>
+                      <div className="rounded-lg bg-muted/50 p-4 border-l-4 border-primary">
+                        <p className="text-sm leading-relaxed text-foreground/90">
+                          {video.prompt}
                         </p>
-                      );
-                    })}
+                      </div>
+                    </div>
+
+                    {/* Explanation */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        Explanation
+                      </h3>
+                      <div className="space-y-4">
+                        {video.explanation.split('\n\n').map((paragraph: string, index: number) => {
+                          // Check if paragraph starts with a scene marker
+                          const sceneMatch = paragraph.match(/^\[Scene (\d+)\]/);
+
+                          if (sceneMatch) {
+                            const sceneNumber = sceneMatch[1];
+                            const content = paragraph.replace(/^\[Scene \d+\]\n?/, '');
+
+                            return (
+                              <div key={index} className="space-y-2" data-testid={`section-scene-${sceneNumber}`}>
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                                    {sceneNumber}
+                                  </div>
+                                  <div className="h-px bg-border flex-1"></div>
+                                </div>
+                                <div className="ml-9">
+                                  <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
+                                    {content}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Check for section headers (lines that are short and end with colon)
+                          if (paragraph.length < 50 && paragraph.includes(':')) {
+                            return (
+                              <div key={index} className="space-y-2">
+                                <h4 className="text-sm font-semibold text-foreground">
+                                  {paragraph}
+                                </h4>
+                              </div>
+                            );
+                          }
+
+                          // Regular paragraph with better formatting
+                          return (
+                            <div key={index} className="space-y-2">
+                              <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
+                                {paragraph}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </ScrollArea>

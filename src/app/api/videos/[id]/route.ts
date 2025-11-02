@@ -78,7 +78,7 @@ export async function GET(
 
     const video = {
       id: prompt.promptId,
-      title: parsedExplanation || prompt.prompt.substring(0, 50) + "...",
+      title: prompt.prompt.substring(0, 50) + (prompt.prompt.length > 50 ? "..." : ""),
       prompt: prompt.prompt,
       explanation: parsedExplanation,
       narration: parsedNarration,

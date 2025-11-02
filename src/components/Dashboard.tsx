@@ -9,7 +9,8 @@ import { BorderBeam } from "@/components/ui/border-beam";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sparkles, Loader2, Languages } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 
@@ -21,8 +22,21 @@ interface Video {
   videoUrl: string | null;
 }
 
+const LANGUAGES = [
+  { value: "english", label: "English" },
+  { value: "hindi", label: "Hindi (हिन्दी)" },
+  { value: "telugu", label: "Telugu (తెలుగు)" },
+  { value: "tamil", label: "Tamil (தமிழ்)" },
+  { value: "kannada", label: "Kannada (ಕನ್ನಡ)" },
+  { value: "malayalam", label: "Malayalam (മലയാളം)" },
+  { value: "bengali", label: "Bengali (বাংলা)" },
+  { value: "marathi", label: "Marathi (मराठी)" },
+  { value: "gujarati", label: "Gujarati (ગુજરાતી)" },
+];
+
 export function Dashboard() {
   const [prompt, setPrompt] = useState("");
+  const [language, setLanguage] = useState("english");
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -36,12 +50,12 @@ export function Dashboard() {
   });
 
   const generateMutation = useMutation({
-    mutationFn: async (prompt: string) => {
+    mutationFn: async (data: { prompt: string; language: string }) => {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to generate");
       return res.json();
@@ -58,7 +72,7 @@ export function Dashboard() {
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
-    generateMutation.mutate(prompt);
+    generateMutation.mutate({ prompt, language });
   };
 
   // Show loading screen when generating
@@ -86,6 +100,24 @@ export function Dashboard() {
                   </CardDescription>
                 </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="language" className="text-sm font-medium flex items-center gap-2">
+                    <Languages className="h-4 w-4" />
+                    Narration Language
+                  </label>
+                  <Select value={language} onValueChange={setLanguage} disabled={generateMutation.isPending}>
+                    <SelectTrigger id="language">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.map((lang) => (
+                        <SelectItem key={lang.value} value={lang.value}>
+                          {lang.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Textarea
                   placeholder="Example: Explain how derivatives work using the slope of a tangent line..."
                   value={prompt}

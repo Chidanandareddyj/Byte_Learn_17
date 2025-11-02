@@ -105,6 +105,7 @@ export type MuxGenerationResult = {
 
 export async function createPromptForUser(
   promptText: string,
+  language: string = "english",
   clerkId?: string | null
 ): Promise<PromptCreationResult> {
   const clerkIdValue = clerkId ?? "unknown";
@@ -119,10 +120,12 @@ export async function createPromptForUser(
     data: {
       promptId: generateUniqueId(),
       prompt: promptText,
+      language: language,
       clerkId: clerkIdValue, // FIX: Associate prompt with the user's clerkId
     },
   });
 
+  console.log(`[PROMPT] Created prompt for user with language: ${language}`);
   return { user, prompt };
 }
 
@@ -151,6 +154,62 @@ export async function generateSpeech(text: string): Promise<{ data: string; mime
   }
   
   return { data: base64Audio, mimeType };
+}
+
+// Language mapping for better prompts
+const LANGUAGE_NAMES: Record<string, string> = {
+  english: "English",
+  hindi: "Hindi",
+  telugu: "Telugu",
+  tamil: "Tamil",
+  kannada: "Kannada",
+  malayalam: "Malayalam",
+  bengali: "Bengali",
+  marathi: "Marathi",
+  gujarati: "Gujarati",
+};
+
+export async function translateNarration(
+  narration: string,
+  targetLanguage: string
+): Promise<string> {
+  // If target language is English, no translation needed
+  if (targetLanguage === "english") {
+    return narration;
+  }
+
+  const ai = getGoogleClient();
+  const languageName = LANGUAGE_NAMES[targetLanguage] || targetLanguage;
+
+  const translationPrompt = `Translate the following educational narration to ${languageName}.
+
+IMPORTANT INSTRUCTIONS:
+- Use a casual, conversational tone as if explaining to a friend
+- DO NOT use formal or bookish language
+- Use everyday words and expressions that people commonly use when talking
+- Make it sound natural and engaging, like how a teacher would explain in a friendly way
+- Keep the meaning accurate but the style informal and approachable
+
+Original narration in English:
+${narration}
+
+Provide ONLY the translated narration in ${languageName}, without any additional text or explanations.`;
+
+  const response = await retryWithBackoff(() =>
+    ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: translationPrompt,
+    })
+  );
+
+  const translatedText = response.text?.trim();
+
+  if (!translatedText) {
+    throw new Error("Failed to translate narration");
+  }
+
+  console.log(`[TRANSLATION] Completed translation to ${targetLanguage}`);
+  return translatedText;
 }
 
 export function getPromptByPublicId(promptId: string): Promise<PromptModel | null> {
@@ -225,6 +284,7 @@ export async function generateScriptForPrompt(prompt: PromptModel): Promise<Scri
     },
   });
 
+  console.log(`[SCRIPT] Generated script with ${scenes.length} scenes`);
   return {
     scriptRecord,
     title: parsed.title ?? "",
@@ -238,6 +298,7 @@ export async function generateScriptForPrompt(prompt: PromptModel): Promise<Scri
 export interface GenerateAudioOptions {
   narration?: string;
   scriptRecord?: ScriptModel;
+  language?: string;
 }
 
 export async function generateAudioForPrompt(
@@ -255,10 +316,20 @@ export async function generateAudioForPrompt(
     throw new Error("Script not found for prompt");
   }
 
-  const narration = options.narration ?? scriptRecord.narration;
+  let narration = options.narration ?? scriptRecord.narration;
 
   if (!narration) {
     throw new Error("Narration not available for audio generation");
+  }
+
+  // Get the language from options or from the prompt record
+  const language = options.language ?? prompt.language ?? "english";
+
+  // Translate narration if not in English
+  if (language !== "english") {
+    console.log(`[TTS] Translating narration from English to ${language}`);
+    narration = await translateNarration(narration, language);
+    console.log(`[TTS] Translation completed`);
   }
 
   let audioUrl: string;
@@ -337,6 +408,7 @@ export async function generateAudioForPrompt(
     },
   });
 
+  console.log(`[AUDIO] Generated audio ${usedTestAudio ? '(test audio)' : '(TTS generated)'}`);
   return { audioRecord, audioUrl, usedTestAudio };
 }
 
@@ -390,6 +462,7 @@ export async function renderVideoForPrompt(
     },
   });
 
+  console.log(`[VIDEO] Rendered video with ${videoResponse.scenes_rendered} scenes`);
   return {
     videoRecord,
     videoUrl: videoResponse.video_url,
@@ -469,6 +542,7 @@ export async function muxMediaForPrompt(
     },
   });
 
+  console.log(`[MUX] Completed audio-video muxing`);
   return {
     videoRecord,
     finalVideoUrl,
@@ -486,14 +560,17 @@ export interface GenerationWorkflowResult {
 
 export async function runGenerationWorkflow(args: {
   promptText: string;
+  language?: string;
   clerkId?: string | null;
 }): Promise<GenerationWorkflowResult> {
-  const { prompt } = await createPromptForUser(args.promptText, args.clerkId);
+  const language = args.language ?? "english";
+  const { prompt } = await createPromptForUser(args.promptText, language, args.clerkId);
 
   const scriptResult = await generateScriptForPrompt(prompt);
   const audioResult = await generateAudioForPrompt(prompt, {
     narration: scriptResult.fullNarration,
     scriptRecord: scriptResult.scriptRecord,
+    language: language,
   });
   const videoResult = await renderVideoForPrompt(prompt, {
     manimScript: scriptResult.fullManimScript,
@@ -505,6 +582,7 @@ export async function runGenerationWorkflow(args: {
     outputName: `final_${scriptResult.scriptRecord.scriptId}`,
   });
 
+  console.log(`[WORKFLOW] Generation workflow completed successfully`);
   return {
     prompt,
     scriptResult,
