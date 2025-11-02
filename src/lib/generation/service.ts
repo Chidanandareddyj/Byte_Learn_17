@@ -203,19 +203,17 @@ export async function generateScriptForPrompt(prompt: PromptModel): Promise<Scri
 
   const fullManimScript = scenes
     .map((scene) => {
-      const sceneNumber = (scene as { sceneNumber?: unknown }).sceneNumber ?? "?";
       const manimScript = (scene as { manimScript?: string }).manimScript ?? "";
-      return `# Scene ${sceneNumber}\n${manimScript}`;
+      return manimScript;
     })
     .join("\n\n");
 
   const fullNarration = scenes
     .map((scene) => {
-      const sceneNumber = (scene as { sceneNumber?: unknown }).sceneNumber ?? "?";
       const narration = (scene as { narration?: string }).narration ?? "";
-      return `[Scene ${sceneNumber}]\n${narration}`;
+      return narration;
     })
-    .join("\n\n");
+    .join(" ");
 
   const scriptRecord = await prisma.script.create({
     data: {
@@ -404,6 +402,7 @@ export interface MuxOptions {
   videoUrl?: string;
   outputName?: string;
   bucketName?: string;
+  audioSpeed?: number;
 }
 
 export async function muxMediaForPrompt(
@@ -447,6 +446,7 @@ export async function muxMediaForPrompt(
       audio_url: audioUrl,
       output_name: options.outputName ?? `final_${generateUniqueId()}`,
       bucket_name: options.bucketName ?? "muxvideos",
+      audio_speed: options.audioSpeed ?? 1.0, // Keep audio at normal speed to match longer video
     }),
   });
 
