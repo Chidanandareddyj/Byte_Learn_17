@@ -87,47 +87,33 @@ export async function POST(request: NextRequest) {
   const operations: Prisma.PrismaPromise<unknown>[] = [];
 
   if (payload.videoRecordId) {
-    const videoData: Record<string, unknown> = {
-      status,
-      jobId,
-    };
-
-    if (status === "COMPLETED" && typeof payload.videoUrl === "string") {
-      videoData.videoUrl = payload.videoUrl;
-      videoData.errorMessage = null;
-    }
-
-    if (status === "FAILED") {
-      videoData.errorMessage = errorMessage;
-    }
-
     operations.push(
       prisma.video.update({
         where: { id: payload.videoRecordId },
-        data: videoData as any,
+        data: {
+          status,
+          jobId,
+          ...(status === "COMPLETED" && typeof payload.videoUrl === "string"
+            ? { videoUrl: payload.videoUrl, errorMessage: null }
+            : {}),
+          ...(status === "FAILED" ? { errorMessage: errorMessage } : {}),
+        },
       })
     );
   }
 
   if (payload.muxRecordId) {
-    const muxData: Record<string, unknown> = {
-      status,
-      jobId,
-    };
-
-    if (status === "COMPLETED" && typeof payload.finalVideoUrl === "string") {
-      muxData.finalvideoUrl = payload.finalVideoUrl;
-      muxData.errorMessage = null;
-    }
-
-    if (status === "FAILED") {
-      muxData.errorMessage = errorMessage;
-    }
-
     operations.push(
       prisma.mux.update({
         where: { id: payload.muxRecordId },
-        data: muxData as any,
+        data: {
+          status,
+          jobId,
+          ...(status === "COMPLETED" && typeof payload.finalVideoUrl === "string"
+            ? { finalvideoUrl: payload.finalVideoUrl, errorMessage: null }
+            : {}),
+          ...(status === "FAILED" ? { errorMessage: errorMessage } : {}),
+        },
       })
     );
   }

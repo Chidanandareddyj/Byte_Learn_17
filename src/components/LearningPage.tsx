@@ -59,7 +59,6 @@ export function LearningPage() {
     );
   }
 
-  const isProcessing = video.status !== "COMPLETED";
   const isFailed = video.status === "FAILED";
   const failureReason = video.errorMessage || "The rendering service reported an error.";
 
@@ -75,10 +74,10 @@ export function LearningPage() {
               <span
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
                   video.status === "COMPLETED"
-                    ? "bg-emerald-100 text-emerald-700"
+                    ? "bg-primary/10 text-primary"
                     : video.status === "FAILED"
                     ? "bg-destructive/10 text-destructive"
-                    : "bg-amber-100 text-amber-700"
+                    : "bg-secondary/10 text-secondary"
                 }`}
               >
                 {video.status === "COMPLETED" && "Ready"}

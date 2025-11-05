@@ -62,10 +62,10 @@ export function VideoCard({ id, title, videoUrl, status, errorMessage, date }: V
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
               status === "COMPLETED"
-                ? "bg-emerald-100 text-emerald-700"
+                ? "bg-primary/10 text-primary"
                 : status === "FAILED"
                 ? "bg-destructive/10 text-destructive"
-                : "bg-amber-100 text-amber-700"
+                : "bg-secondary/10 text-secondary"
             }`}
           >
             {status === "COMPLETED" && "Ready"}

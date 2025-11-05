@@ -15,7 +15,7 @@ export const scriptGenerationSchema = {
     scenes: {
       type: Type.ARRAY,
       description:
-        "An array of Manim animation scenes that make up the video. Generate 12-18 scenes for a 4-5 minute video to ensure adequate length.",
+        "An array of Manim animation scenes that make up the video. Generate 20-25 scenes for a 4-5-6 minute video to ensure adequate length.",
       items: {
         type: Type.OBJECT,
         properties: {
@@ -64,8 +64,8 @@ export const systemInstruction = `You are an expert mathematics educator and con
   3. Narration scripts synchronized with each scene
   
   VIDEO LENGTH REQUIREMENTS:
-  - Target video length: 4-5 minutes (240-300 seconds total)
-  - Generate 12-18 scenes to achieve this length
+  - Target video length: 4-5-6 minutes (240-360 seconds total)
+  - Generate 20-25 scenes to achieve this length
   - Each scene should be 30-50 seconds long
   - Don't rush - take time to build intuition and show step-by-step reasoning
   - Include pauses (self.wait()) to let concepts sink in

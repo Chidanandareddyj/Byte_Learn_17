@@ -492,13 +492,13 @@ export async function enqueueVideoProcessingJob(
       data: {
         promptId: prompt.id,
         status: "QUEUED",
-      } as any,
+      },
     }),
     prisma.mux.create({
       data: {
         promptId: prompt.id,
         status: "QUEUED",
-      } as any,
+      },
     }),
   ]);
 
@@ -549,14 +549,14 @@ export async function enqueueVideoProcessingJob(
           data: {
             status: "FAILED",
             errorMessage: detailMessage,
-          } as any,
+          },
         }),
         prisma.mux.update({
           where: { id: muxRecord.id },
           data: {
             status: "FAILED",
             errorMessage: detailMessage,
-          } as any,
+          },
         }),
       ]);
 
@@ -579,7 +579,7 @@ export async function enqueueVideoProcessingJob(
           status: "PROCESSING",
           jobId: resolvedJobId,
           errorMessage: null,
-        } as any,
+        },
       }),
       prisma.mux.update({
         where: { id: muxRecord.id },
@@ -587,7 +587,7 @@ export async function enqueueVideoProcessingJob(
           status: "PROCESSING",
           jobId: resolvedJobId,
           errorMessage: null,
-        } as any,
+        },
       }),
     ]);
 
@@ -608,14 +608,14 @@ export async function enqueueVideoProcessingJob(
         data: {
           status: "FAILED",
           errorMessage: message,
-        } as any,
+        },
       }),
       prisma.mux.update({
         where: { id: muxRecord.id },
         data: {
           status: "FAILED",
           errorMessage: message,
-        } as any,
+        },
       }),
     ]).catch((updateError) => {
       console.error("Failed to record queue failure", updateError);
@@ -676,7 +676,7 @@ export async function renderVideoForPrompt(
       promptId: prompt.id,
       status: "COMPLETED",
       errorMessage: null,
-    } as any,
+    },
   });
 
   console.log(`[VIDEO] Rendered video with ${videoResponse.scenes_rendered} scenes`);
@@ -758,7 +758,7 @@ export async function muxMediaForPrompt(
       promptId: prompt.id,
       status: "COMPLETED",
       errorMessage: null,
-    } as any,
+    },
   });
 
   console.log(`[MUX] Completed audio-video muxing`);
