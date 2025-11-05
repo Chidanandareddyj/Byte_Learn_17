@@ -24,28 +24,29 @@ export async function POST(request: NextRequest) {
       clerkId: clerkUser?.id ?? null,
     });
 
-    return NextResponse.json({
-      success: true,
-      promptId: workflow.prompt.promptId,
-      promptRecordId: workflow.prompt.id,
-      scriptId: workflow.scriptResult.scriptRecord.scriptId,
-      audioId: workflow.audioResult.audioRecord.id,
-      videoId: workflow.videoResult.videoRecord.id,
-      muxVideoId: workflow.muxResult.videoRecord.id,
-      audioUrl: workflow.audioResult.audioUrl,
-      usedTestAudio: workflow.audioResult.usedTestAudio,
-      videoUrl: workflow.videoResult.videoUrl,
-      videoMessage: workflow.videoResult.message,
-      finalVideoUrl: workflow.muxResult.finalVideoUrl,
-      muxMessage: workflow.muxResult.message,
-      result: {
-        title: workflow.scriptResult.title,
-        explanation: workflow.scriptResult.explanation,
-        scenes: workflow.scriptResult.scenes,
-        fullManimScript: workflow.scriptResult.fullManimScript,
-        fullNarration: workflow.scriptResult.fullNarration,
+    return NextResponse.json(
+      {
+        success: true,
+        promptId: workflow.prompt.promptId,
+        promptRecordId: workflow.prompt.id,
+        scriptId: workflow.scriptResult.scriptRecord.scriptId,
+        audioId: workflow.audioResult.audioRecord.id,
+        audioUrl: workflow.audioResult.audioUrl,
+        usedTestAudio: workflow.audioResult.usedTestAudio,
+        videoRecordId: workflow.job.videoRecord.id,
+        muxRecordId: workflow.job.muxRecord.id,
+        jobId: workflow.job.jobId,
+        jobStatus: workflow.job.status,
+        result: {
+          title: workflow.scriptResult.title,
+          explanation: workflow.scriptResult.explanation,
+          scenes: workflow.scriptResult.scenes,
+          fullManimScript: workflow.scriptResult.fullManimScript,
+          fullNarration: workflow.scriptResult.fullNarration,
+        },
       },
-    });
+      { status: 202 }
+    );
   } catch (error) {
     console.error("Error generating content:", error);
     return NextResponse.json(

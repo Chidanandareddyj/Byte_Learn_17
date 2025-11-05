@@ -10,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { RefreshCw, Download, Share2, ChevronDown, ChevronUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
+type VideoStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
+
 interface Video {
   id: string;
   title: string;
@@ -17,6 +19,8 @@ interface Video {
   explanation: string;
   narration: string;
   videoUrl: string | null;
+  status: VideoStatus;
+  errorMessage: string | null;
   createdAt: string;
 }
 
@@ -34,6 +38,8 @@ export function LearningPage() {
       return res.json();
     },
     enabled: !!videoId,
+    refetchInterval: (query) =>
+      query.state.data?.status !== "COMPLETED" ? 5000 : false,
   });
 
   if (isLoading) {
@@ -53,6 +59,10 @@ export function LearningPage() {
     );
   }
 
+  const isProcessing = video.status !== "COMPLETED";
+  const isFailed = video.status === "FAILED";
+  const failureReason = video.errorMessage || "The rendering service reported an error.";
+
   return (
     <div className="min-h-screen notebook-bg">
       <Navbar variant="app" />
@@ -60,8 +70,25 @@ export function LearningPage() {
       <div className="container mx-auto px-6 py-8">
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-3 space-y-6">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Status:</span>
+              <span
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
+                  video.status === "COMPLETED"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : video.status === "FAILED"
+                    ? "bg-destructive/10 text-destructive"
+                    : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {video.status === "COMPLETED" && "Ready"}
+                {video.status === "PROCESSING" && "Processing"}
+                {video.status === "QUEUED" && "Queued"}
+                {video.status === "FAILED" && "Failed"}
+              </span>
+            </div>
             <div className="aspect-video rounded-xl overflow-hidden bg-muted border shadow-lg">
-              {video.videoUrl ? (
+              {video.status === "COMPLETED" && video.videoUrl ? (
                 <video
                   src={video.videoUrl}
                   controls
@@ -71,6 +98,11 @@ export function LearningPage() {
                 >
                   Your browser does not support the video tag.
                 </video>
+              ) : isFailed ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-center px-6">
+                  <p className="font-semibold text-destructive">We could not finish the video.</p>
+                  <p className="mt-2 text-sm text-muted-foreground max-w-md">{failureReason}</p>
+                </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <p className="text-muted-foreground">Video is being processed...</p>
@@ -91,7 +123,7 @@ export function LearningPage() {
                   }
                 }} 
                 data-testid="button-download"
-                disabled={!video.videoUrl}
+                disabled={!video.videoUrl || video.status !== "COMPLETED"}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download

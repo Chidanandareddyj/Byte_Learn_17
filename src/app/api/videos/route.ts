@@ -30,6 +30,12 @@ export async function GET() {
             createdAt: "desc",
           },
         },
+        videos: {
+          take: 1,
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
         muxes: {
           take: 1,
           orderBy: {
@@ -45,13 +51,32 @@ export async function GET() {
     console.log("Prompts found for user:", prompts.length);
 
     // Transform the data to match the expected Video interface
-    const videos = prompts.map((prompt) => ({
-      id: prompt.promptId,
-      title: prompt.scripts[0]?.explanation || prompt.prompt.substring(0, 50) + "...",
-      prompt: prompt.prompt,
-      createdAt: prompt.createdAt.toISOString(),
-      videoUrl: prompt.muxes[0]?.finalvideoUrl || null,
-    }));
+    const videos = prompts.map((prompt) => {
+      const latestMux = prompt.muxes[0] as unknown as {
+        finalvideoUrl?: string | null;
+        status?: string;
+        errorMessage?: string | null;
+      } | undefined;
+      const latestVideo = prompt.videos[0] as unknown as {
+        videoUrl?: string | null;
+        status?: string;
+        errorMessage?: string | null;
+      } | undefined;
+
+      return {
+        id: prompt.promptId,
+        title: prompt.scripts[0]?.explanation || prompt.prompt.substring(0, 50) + "...",
+        prompt: prompt.prompt,
+        createdAt: prompt.createdAt.toISOString(),
+        videoUrl: latestMux?.finalvideoUrl || null,
+        status:
+          (latestMux?.status as string | undefined) ||
+          (latestVideo?.status as string | undefined) ||
+          "PROCESSING",
+        errorMessage:
+          latestMux?.errorMessage ?? latestVideo?.errorMessage ?? null,
+      };
+    });
 
     return NextResponse.json(videos);
   } catch (error) {

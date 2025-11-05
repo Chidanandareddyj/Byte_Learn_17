@@ -14,12 +14,16 @@ import { Sparkles, Loader2, Languages } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 
+type VideoStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
+
 interface Video {
   id: string;
   title: string;
   prompt: string;
   createdAt: string;
   videoUrl: string | null;
+  status: VideoStatus;
+  errorMessage: string | null;
 }
 
 const LANGUAGES = [
@@ -47,6 +51,10 @@ export function Dashboard() {
       if (!res.ok) throw new Error("Failed to fetch videos");
       return res.json();
     },
+    refetchInterval: (query) =>
+      query.state.data?.some((video: Video) => video.status !== "COMPLETED")
+        ? 5000
+        : false,
   });
 
   const generateMutation = useMutation({
@@ -175,6 +183,8 @@ export function Dashboard() {
                     id={video.id}
                     title={video.title}
                     videoUrl={video.videoUrl}
+                    status={video.status}
+                    errorMessage={video.errorMessage}
                     date={formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
                   />
                 ))}

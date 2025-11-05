@@ -71,6 +71,52 @@ function getSupabaseClient(): SupabaseClient {
   return supabaseClient;
 }
 
+function resolveWebhookUrl(): string {
+  const explicit = process.env.VIDEO_WEBHOOK_URL;
+  if (explicit && explicit.trim()) {
+    return explicit.trim();
+  }
+
+  const base = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
+  if (!base || !base.trim()) {
+    throw new Error(
+      "VIDEO_WEBHOOK_URL or APP_URL (or NEXT_PUBLIC_APP_URL) must be configured for background video callbacks."
+    );
+  }
+
+  const normalizedBase = base.trim().replace(/\/$/, "");
+  return `${normalizedBase}/api/webhooks/video-generation`;
+}
+
+function resolveMuxBucket(): string {
+  return process.env.MUX_BUCKET_NAME?.trim() || "muxvideos";
+}
+
+function resolveAudioSpeed(): number {
+  const raw = process.env.MUX_AUDIO_SPEED?.trim();
+  if (!raw) {
+    return 1.0;
+  }
+
+  const speed = Number(raw);
+  return Number.isFinite(speed) && speed > 0 ? speed : 1.0;
+}
+
+function safeParseJSON<T>(raw: string): T | null {
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    console.warn("Failed to parse JSON payload", error);
+    return null;
+  }
+}
+
+type GenerationStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
+
 export type PromptCreationResult = {
   user: UserModel;
   prompt: PromptModel;
@@ -101,6 +147,13 @@ export type MuxGenerationResult = {
   videoRecord: MuxModel;
   finalVideoUrl: string;
   message: string;
+};
+
+export type VideoJobQueueResult = {
+  jobId: string;
+  videoRecord: VideoModel;
+  muxRecord: MuxModel;
+  status: GenerationStatus;
 };
 
 export async function createPromptForUser(
@@ -412,6 +465,168 @@ export async function generateAudioForPrompt(
   return { audioRecord, audioUrl, usedTestAudio };
 }
 
+export interface EnqueueVideoJobOptions {
+  prompt: PromptModel;
+  script: ScriptGenerationResult;
+  audioUrl: string;
+  language: string;
+  quality?: "low" | "medium" | "high";
+  audioSpeed?: number;
+}
+
+type AsyncRenderResponse = {
+  job_id?: string;
+  jobId?: string;
+  status?: string;
+  detail?: unknown;
+  message?: string;
+};
+
+export async function enqueueVideoProcessingJob(
+  options: EnqueueVideoJobOptions
+): Promise<VideoJobQueueResult> {
+  const { prompt, script, audioUrl } = options;
+
+  const [videoRecord, muxRecord] = await prisma.$transaction([
+    prisma.video.create({
+      data: {
+        promptId: prompt.id,
+        status: "QUEUED",
+      } as any,
+    }),
+    prisma.mux.create({
+      data: {
+        promptId: prompt.id,
+        status: "QUEUED",
+      } as any,
+    }),
+  ]);
+
+  const callbackUrl = resolveWebhookUrl();
+  const callbackSecret = process.env.VIDEO_WEBHOOK_SECRET?.trim();
+  const bucketName = resolveMuxBucket();
+  const audioSpeed = options.audioSpeed ?? resolveAudioSpeed();
+
+  const payload = {
+    script_code: script.fullManimScript,
+    scene_name: "auto",
+    quality: options.quality ?? "low",
+    prompt_id: prompt.promptId,
+    prompt_record_id: prompt.id,
+    script_id: script.scriptRecord.scriptId,
+    video_record_id: videoRecord.id,
+    mux_record_id: muxRecord.id,
+    audio_url: audioUrl,
+    output_name: `final_${script.scriptRecord.scriptId}`,
+    bucket_name: bucketName,
+    audio_speed: audioSpeed,
+    language: options.language,
+    callback_url: callbackUrl,
+    callback_secret: callbackSecret,
+  };
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/render-and-upload-async`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const rawBody = await response.text();
+    const parsedBody = safeParseJSON<AsyncRenderResponse>(rawBody);
+
+    if (!response.ok) {
+      const detailMessage =
+        (parsedBody?.detail && typeof parsedBody.detail === "string"
+          ? parsedBody.detail
+          : null) ?? rawBody ?? "Failed to enqueue render job";
+
+      await prisma.$transaction([
+        prisma.video.update({
+          where: { id: videoRecord.id },
+          data: {
+            status: "FAILED",
+            errorMessage: detailMessage,
+          } as any,
+        }),
+        prisma.mux.update({
+          where: { id: muxRecord.id },
+          data: {
+            status: "FAILED",
+            errorMessage: detailMessage,
+          } as any,
+        }),
+      ]);
+
+      throw new Error(`Failed to enqueue background render: ${detailMessage}`);
+    }
+
+    const resolvedJobId =
+      (parsedBody?.job_id && typeof parsedBody.job_id === "string"
+        ? parsedBody.job_id
+        : undefined) ??
+      (parsedBody?.jobId && typeof parsedBody.jobId === "string"
+        ? parsedBody.jobId
+        : undefined) ??
+      generateUniqueId();
+
+    const [updatedVideo, updatedMux] = await prisma.$transaction([
+      prisma.video.update({
+        where: { id: videoRecord.id },
+        data: {
+          status: "PROCESSING",
+          jobId: resolvedJobId,
+          errorMessage: null,
+        } as any,
+      }),
+      prisma.mux.update({
+        where: { id: muxRecord.id },
+        data: {
+          status: "PROCESSING",
+          jobId: resolvedJobId,
+          errorMessage: null,
+        } as any,
+      }),
+    ]);
+
+    console.log(`[QUEUE] Render job ${resolvedJobId} queued for prompt ${prompt.promptId}`);
+
+    return {
+      jobId: resolvedJobId,
+      videoRecord: updatedVideo,
+      muxRecord: updatedMux,
+      status: "PROCESSING" as GenerationStatus,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    await prisma.$transaction([
+      prisma.video.update({
+        where: { id: videoRecord.id },
+        data: {
+          status: "FAILED",
+          errorMessage: message,
+        } as any,
+      }),
+      prisma.mux.update({
+        where: { id: muxRecord.id },
+        data: {
+          status: "FAILED",
+          errorMessage: message,
+        } as any,
+      }),
+    ]).catch((updateError) => {
+      console.error("Failed to record queue failure", updateError);
+    });
+
+    throw error instanceof Error
+      ? error
+      : new Error("Unknown error while enqueueing render job");
+  }
+}
+
 export interface RenderVideoOptions {
   manimScript?: string;
   scriptRecord?: ScriptModel;
@@ -459,7 +674,9 @@ export async function renderVideoForPrompt(
     data: {
       videoUrl: videoResponse.video_url,
       promptId: prompt.id,
-    },
+      status: "COMPLETED",
+      errorMessage: null,
+    } as any,
   });
 
   console.log(`[VIDEO] Rendered video with ${videoResponse.scenes_rendered} scenes`);
@@ -539,7 +756,9 @@ export async function muxMediaForPrompt(
     data: {
       finalvideoUrl: finalVideoUrl,
       promptId: prompt.id,
-    },
+      status: "COMPLETED",
+      errorMessage: null,
+    } as any,
   });
 
   console.log(`[MUX] Completed audio-video muxing`);
@@ -554,8 +773,7 @@ export interface GenerationWorkflowResult {
   prompt: PromptModel;
   scriptResult: ScriptGenerationResult;
   audioResult: AudioGenerationResult;
-  videoResult: VideoGenerationResult;
-  muxResult: MuxGenerationResult;
+  job: VideoJobQueueResult;
 }
 
 export async function runGenerationWorkflow(args: {
@@ -572,22 +790,18 @@ export async function runGenerationWorkflow(args: {
     scriptRecord: scriptResult.scriptRecord,
     language: language,
   });
-  const videoResult = await renderVideoForPrompt(prompt, {
-    manimScript: scriptResult.fullManimScript,
-    scriptRecord: scriptResult.scriptRecord,
-  });
-  const muxResult = await muxMediaForPrompt(prompt, {
+  const job = await enqueueVideoProcessingJob({
+    prompt,
+    script: scriptResult,
     audioUrl: audioResult.audioUrl,
-    videoUrl: videoResult.videoUrl,
-    outputName: `final_${scriptResult.scriptRecord.scriptId}`,
+    language,
   });
 
-  console.log(`[WORKFLOW] Generation workflow completed successfully`);
+  console.log(`[WORKFLOW] Generation workflow queued under job ${job.jobId}`);
   return {
     prompt,
     scriptResult,
     audioResult,
-    videoResult,
-    muxResult,
+    job,
   };
 }

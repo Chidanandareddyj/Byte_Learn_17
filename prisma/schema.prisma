@@ -13,6 +13,13 @@ datasource db {
   url = env("DATABASE_URL")
 }
 
+enum GenerationStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 
 model User {
   id String @id @default(cuid())
@@ -57,16 +64,24 @@ model Audio{
 
 model Video{
   id String @id @default(cuid())
-  videoUrl String
+  videoUrl String?
+  status GenerationStatus @default(QUEUED)
+  jobId String?
+  errorMessage String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   promptId String
   prompt Prompt @relation(fields: [promptId], references: [id])
 }
 
 model Mux{
   id String @id @default(cuid())
-  finalvideoUrl String
+  finalvideoUrl String?
+  status GenerationStatus @default(QUEUED)
+  jobId String?
+  errorMessage String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   promptId String
   prompt Prompt @relation(fields: [promptId], references: [id])
 }

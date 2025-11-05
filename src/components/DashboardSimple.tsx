@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
 import { VideoCard } from "@/components/VideoCard";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sparkles, Loader2, Languages } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
+type VideoStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
+
 interface Video {
   id: string;
   title: string;
   prompt: string;
   createdAt: string;
   videoUrl: string | null;
+  status: VideoStatus;
+  errorMessage: string | null;
 }
 
 const LANGUAGES = [
@@ -39,7 +43,7 @@ export function DashboardSimple() {
   const [error, setError] = useState<string | null>(null);
 
   // Simple fetch function
-  const fetchVideos = async () => {
+  const fetchVideos = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch("/api/videos");
@@ -51,12 +55,24 @@ export function DashboardSimple() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Fetch videos when component mounts
   useEffect(() => {
     fetchVideos();
-  }, []);
+  }, [fetchVideos]);
+
+  useEffect(() => {
+    if (!videos.some((video) => video.status !== "COMPLETED")) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      fetchVideos();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [videos, fetchVideos]);
 
   // Simple generate function
   const handleGenerate = async () => {
@@ -75,8 +91,8 @@ export function DashboardSimple() {
       
       if (!response.ok) throw new Error("Failed to generate");
       
-      // After successful generation, refetch videos
-      await fetchVideos();
+    // After successful generation, refetch videos
+    await fetchVideos();
       setPrompt(""); // Clear the input
       
     } catch (err) {
@@ -182,6 +198,8 @@ export function DashboardSimple() {
                     id={video.id}
                     title={video.title}
                     videoUrl={video.videoUrl}
+                    status={video.status}
+                    errorMessage={video.errorMessage}
                     date={formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
                   />
                 ))}

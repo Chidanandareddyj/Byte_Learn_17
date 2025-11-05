@@ -30,6 +30,12 @@ export async function GET(
             createdAt: "desc",
           },
         },
+        videos: {
+          take: 1,
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
         muxes: {
           take: 1,
           orderBy: {
@@ -63,7 +69,23 @@ export async function GET(
     }
 
     const script = prompt.scripts[0];
-    const mux = prompt.muxes[0];
+    const mux = prompt.muxes[0] as unknown as {
+      finalvideoUrl?: string | null;
+      status?: string;
+      errorMessage?: string | null;
+    } | undefined;
+
+    const videoRecord = prompt.videos[0] as unknown as {
+      status?: string;
+      errorMessage?: string | null;
+    } | undefined;
+
+    const jobStatus =
+      (mux?.status as string | undefined) ||
+      (videoRecord?.status as string | undefined) ||
+      "PROCESSING";
+
+    const jobError = mux?.errorMessage ?? videoRecord?.errorMessage ?? null;
 
     // Parse the explanation and narration
     let parsedExplanation = "";
@@ -83,6 +105,8 @@ export async function GET(
       explanation: parsedExplanation,
       narration: parsedNarration,
       videoUrl: mux?.finalvideoUrl || null,
+      status: jobStatus,
+      errorMessage: jobError,
       createdAt: prompt.createdAt.toISOString(),
     };
 
