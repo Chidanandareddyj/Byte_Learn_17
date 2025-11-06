@@ -25,15 +25,14 @@ Transform your learning prompts into stunning visual explanations with AI-genera
 ### Backend
 - **Python Backend**: FastAPI for Manim video rendering (see `byte_learn_backend/`)
 - **AI**: Google Gemini AI for script generation
-- **TTS**: ElevenLabs for voice synthesis
+- **TTS**: Google TTS for voice synthesis
 - **Storage**: Supabase for video and audio storage
-- **Database**: PostgreSQL
+- **Database**: Supabase (PostgreSQL)
 
 ## 📋 Prerequisites
 
 - Node.js 20+
 - pnpm (or npm/yarn)
-- PostgreSQL database
 - Python 3.9+ (for backend)
 - Manim installed (for backend video rendering)
 
