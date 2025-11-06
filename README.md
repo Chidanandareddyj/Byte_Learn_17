@@ -6,7 +6,7 @@ Transform your learning prompts into stunning visual explanations with AI-genera
 
 - **AI-Generated Animations**: Convert text prompts into educational Manim videos using Google Gemini AI
 - **Multi-Language Support**: Get narrations in 9 Indian languages (English, Hindi, Tamil, Telugu, Malayalam, Kannada, Bengali, Gujarati, Marathi)
-- **Text-to-Speech**: Professional voice narration powered by ElevenLabs
+- **Text-to-Speech**: Professional voice narration powered by Google Gemini TTS
 - **User Authentication**: Secure authentication using Clerk
 - **Dashboard**: Track your learning progress and manage generated content
 - **Background Processing**: Asynchronous video generation with status tracking
