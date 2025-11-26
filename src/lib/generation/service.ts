@@ -306,9 +306,25 @@ export async function generateScriptForPrompt(prompt: PromptModel): Promise<Scri
   try {
     parsed = JSON.parse(rawText) as AIScriptResponse;
   } catch (error) {
-    throw new Error(
-      `Failed to parse AI response as JSON: ${(error as Error).message}`
-    );
+    console.error("Raw AI response (first 500 chars):", rawText.substring(0, 500));
+    console.error("Raw AI response (around error position):", rawText.substring(27000, 27200));
+    
+    // Try to fix common JSON issues
+    let fixedText = rawText;
+    
+    // Remove any markdown code blocks if present
+    fixedText = fixedText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+    
+    // Try parsing again with fixed text
+    try {
+      parsed = JSON.parse(fixedText) as AIScriptResponse;
+      console.log("Successfully parsed after removing markdown blocks");
+    } catch (secondError) {
+      throw new Error(
+        `Failed to parse AI response as JSON: ${(error as Error).message}\n` +
+        `Position: ${rawText.substring(Math.max(0, 27082 - 100), Math.min(rawText.length, 27082 + 100))}`
+      );
+    }
   }
 
   const scenes: unknown[] = Array.isArray(parsed.scenes) ? parsed.scenes : [];
