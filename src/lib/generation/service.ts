@@ -285,7 +285,7 @@ export async function generateScriptForPrompt(prompt: PromptModel): Promise<Scri
 
   const response = await retryWithBackoff(() =>
     ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: `Generate a video script for the topic: "${prompt.prompt}"`,
       config: {
         systemInstruction,
