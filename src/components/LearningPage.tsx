@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RefreshCw, Download, Share2, ChevronDown, ChevronUp } from "lucide-react";
+import { RefreshCw, Download, Share2, ChevronDown, ChevronUp, Loader2, Clock, Film } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 type VideoStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
@@ -26,6 +26,7 @@ interface Video {
 
 export function LearningPage() {
   const [showTranscript, setShowTranscript] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const searchParams = useSearchParams();
   const videoId = searchParams.get("id") ?? undefined;
 
@@ -41,6 +42,44 @@ export function LearningPage() {
     refetchInterval: (query) =>
       query.state.data?.status !== "COMPLETED" ? 5000 : false,
   });
+
+  // Timer for elapsed time during processing
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (video && (video.status === "PROCESSING" || video.status === "QUEUED")) {
+      interval = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setElapsedTime(0);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [video?.status]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Calculate progress percentage based on elapsed time and estimated duration
+  const getProgressPercentage = () => {
+    if (video?.status === "QUEUED") {
+      // Slowly increase from 10% to 25% while queued
+      return Math.min(10 + (elapsedTime * 0.5), 25);
+    } else if (video?.status === "PROCESSING") {
+      // Start at 25% and gradually increase to 90% over 4 minutes (240 seconds)
+      // Never reach 100% until actually completed
+      const estimatedDuration = 240; // 4 minutes in seconds
+      const progress = 25 + ((elapsedTime / estimatedDuration) * 65);
+      return Math.min(progress, 90);
+    }
+    return 0;
+  };
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -103,8 +142,53 @@ export function LearningPage() {
                   <p className="mt-2 text-sm text-muted-foreground max-w-md">{failureReason}</p>
                 </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <p className="text-muted-foreground">Video is being processed...</p>
+                <div className="w-full h-full flex flex-col items-center justify-center gap-6 px-6">
+                  
+
+                  {/* Status message */}
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {video.status === "QUEUED" ? "Your video is queued" : "Generating your video"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      {video.status === "QUEUED" 
+                        ? "Your video is in the queue and will start processing shortly..."
+                        : "We're creating your educational video with animations and narration..."
+                      }
+                    </p>
+                  </div>
+
+                  {/* Timer and estimated time */}
+                  <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span>Elapsed: {formatTime(elapsedTime)}</span>
+                    </div>
+                    <div className="h-4 w-px bg-border" />
+                    <div className="text-muted-foreground">
+                      <span>Est. time: 4-6 min</span>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-full max-w-md space-y-2">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                        style={{ 
+                          width: `${getProgressPercentage()}%`
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        {video.status === "QUEUED" ? "Waiting in queue..." : "Processing video..."}
+                      </span>
+                      <span className="font-medium">
+                        {Math.round(getProgressPercentage())}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
