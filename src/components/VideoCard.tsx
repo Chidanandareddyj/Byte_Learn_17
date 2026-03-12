@@ -38,10 +38,10 @@ export function VideoCard({ id, title, videoUrl, status, errorMessage, date }: V
   };
 
   return (
-    <div className="bg-[#003049] border border-[rgba(255,255,255,0.15)] p-3 flex flex-col gap-3 transition-all duration-200 hover:border-[#f0f4f2] hover:-translate-y-0.5 cursor-pointer group">
+    <div className="bg-[#003049] border border-[rgba(255,255,255,0.15)] flex flex-col gap-3 transition-all duration-200 hover:border-[#f0f4f2] hover:-translate-y-0.5 cursor-pointer group overflow-hidden">
       
       {/* Thumbnail Area */}
-      <div className="aspect-video bg-[#004266] border-b border-b-[rgba(255,255,255,0.15)] flex items-center justify-center relative overflow-hidden group">
+      <div className="w-full aspect-video bg-[#004266] border-b border-[rgba(255,255,255,0.15)] shrink-0 flex items-center justify-center relative overflow-hidden group">
         {isReady ? (
           <>
              <video
@@ -76,7 +76,7 @@ export function VideoCard({ id, title, videoUrl, status, errorMessage, date }: V
       </div>
 
       {/* Meta Area */}
-      <div className="flex flex-col gap-1 mt-1">
+      <div className="flex flex-col gap-1 mt-1 p-3 pt-0">
         <Link href={`/learn?id=${id}`}>
           <div className={`text-[11px] text-[#f0f4f2] uppercase tracking-[0.05em] whitespace-nowrap overflow-hidden text-ellipsis ${jetbrainsMono.className} hover:underline decoration-1 underline-offset-2`} data-testid={`text-title-${id}`}>
             {title || `Derivation_${id.substring(0,8)}`}

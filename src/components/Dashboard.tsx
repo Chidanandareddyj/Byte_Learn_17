@@ -92,8 +92,8 @@ export function Dashboard() {
     <div className="min-h-screen notebook-bg">
       <Navbar variant="app" />
 
-      <div className="container mx-auto px-6 py-8 mt-[80px]">
-        <div className="grid gap-8 lg:grid-cols-5">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 mt-[80px]">
+        <div className="flex flex-col lg:grid lg:grid-cols-5 gap-8">
           <div className="lg:col-span-2">
             <div className="sticky top-24">
               <Card className="relative overflow-hidden">

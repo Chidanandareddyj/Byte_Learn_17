@@ -106,13 +106,13 @@ export function LearningPage() {
   const generalExplanation = paragraphs.find(p => !p.match(/^\[Scene /) && p.length > 20) || "Generating intuitive visualization of the mathematical concept. Exploring algorithmic structures...";
 
   return (
-    <div className={`h-screen bg-bytelearn-back text-[#f0f4f2] ${sourceSerif.className} flex flex-col overflow-hidden`}>
+    <div className={`min-h-screen bg-bytelearn-back text-[#f0f4f2] ${sourceSerif.className} flex flex-col lg:h-screen lg:overflow-hidden`}>
       <Navbar variant="app" />
       
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] h-[calc(100vh-80px)] mt-[80px]">
+      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_400px] lg:h-[calc(100vh-80px)] mt-[80px]">
         
         {/* Left Player Area */}
-        <section className="p-8 lg:p-10 flex flex-col border-r border-[rgba(255,255,255,0.2)] overflow-y-auto relative custom-scrollbar">
+        <section className="p-4 sm:p-6 lg:p-10 flex flex-col border-b lg:border-b-0 lg:border-r border-[rgba(255,255,255,0.2)] lg:overflow-y-auto relative custom-scrollbar">
             <div className="absolute inset-0 bg-bytelearn-spatial opacity-10 pointer-events-none"></div>
             
             <div className="w-full aspect-video bg-black relative border border-[rgba(255,255,255,0.2)] flex items-center justify-center mb-6 overflow-hidden shadow-2xl shrink-0">
@@ -150,14 +150,14 @@ export function LearningPage() {
             </div>
 
             <div className="relative z-10 flex-col flex gap-2">
-                <h1 className="text-3xl font-light italic mb-1">{video.title}</h1>
-                <div className={`flex gap-6 text-[11px] text-[#a8b5ae] border-b border-[rgba(255,255,255,0.2)] pb-5 mb-5 uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>
+                <h1 className="text-2xl sm:text-3xl font-light italic mb-1">{video.title}</h1>
+                <div className={`flex flex-wrap gap-2 sm:gap-6 text-[10px] sm:text-[11px] text-[#a8b5ae] border-b border-[rgba(255,255,255,0.2)] pb-4 sm:pb-5 mb-4 sm:mb-5 uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>
                     <span>ID: DERIVATION_{video.id?.[0]?.toUpperCase() ?? 'X'}{video.id?.slice(-4)?.toUpperCase() ?? '0000'}</span>
+                    <span className="hidden sm:inline">|</span>
                     <span>PUBLISHED: {format(new Date(video.createdAt || Date.now()), 'MM.dd.yy')}</span>
-                    <span>VIEWS: 0</span>
                 </div>
                 
-                <p className="text-[16px] leading-[1.6] opacity-90 max-w-4xl">
+                <p className="text-[14px] sm:text-[16px] leading-[1.6] opacity-90 max-w-4xl">
                     {generalExplanation}
                 </p>
                 
@@ -179,11 +179,11 @@ export function LearningPage() {
         </section>
 
         {/* Right Sidebar Area */}
-        <aside className="bg-[rgba(0,0,0,0.2)] flex flex-col overflow-y-auto border-l border-[rgba(255,255,255,0.1)] custom-scrollbar">
+        <aside className="bg-[rgba(0,0,0,0.2)] flex flex-col lg:overflow-y-auto border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.1)] custom-scrollbar">
             
             {/* Structural Chapters Overview */}
-            <div className="p-8 border-b border-[rgba(255,255,255,0.2)]">
-                <div className={`text-[11px] text-[#a8b5ae] uppercase mb-5 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
+            <div className="p-4 sm:p-6 lg:p-8 border-b border-[rgba(255,255,255,0.2)]">
+                <div className={`text-[10px] sm:text-[11px] text-[#a8b5ae] uppercase mb-4 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
                     <div className="w-1 h-1 bg-[#f0f4f2]"></div>
                     Structural Chapters
                 </div>
@@ -205,8 +205,8 @@ export function LearningPage() {
             </div>
 
             {/* Active Axioms (Prompt) */}
-            <div className="p-8 border-b border-[rgba(255,255,255,0.2)]">
-                <div className={`text-[11px] text-[#a8b5ae] uppercase mb-5 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
+            <div className="p-4 sm:p-6 lg:p-8 border-b border-[rgba(255,255,255,0.2)]">
+                <div className={`text-[10px] sm:text-[11px] text-[#a8b5ae] uppercase mb-4 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
                     <div className="w-1 h-1 bg-[#f0f4f2]"></div>
                     Learning Prompt
                 </div>
@@ -222,8 +222,8 @@ export function LearningPage() {
             </div>
 
             {/* Narration Transcript */}
-            <div className="p-8">
-                <div className={`text-[11px] text-[#a8b5ae] uppercase mb-5 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
+            <div className="p-4 sm:p-6 lg:p-8">
+                <div className={`text-[10px] sm:text-[11px] text-[#a8b5ae] uppercase mb-4 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
                     <div className="w-1 h-1 bg-[#f0f4f2]"></div>
                     Narration Transcript
                 </div>

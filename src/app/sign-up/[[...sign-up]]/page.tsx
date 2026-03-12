@@ -14,7 +14,8 @@ export default function Page() {
         <SignUp
           routing="path"
           path="/sign-up"
-          redirectUrl="/dashboard"
+          fallbackRedirectUrl="/dashboard"
+          forceRedirectUrl="/dashboard"
           appearance={{
             variables: {
               colorPrimary: '#f0f4f2',
