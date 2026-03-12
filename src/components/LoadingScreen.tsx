@@ -1,67 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
-import { AnimatedGradientText } from "@/components/ui/animated-gradient-text";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { BookOpen, PenTool, Play, CheckCircle, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
+const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["300", "400", "500"], style: ["normal", "italic"] });
 
 interface LoadingScreenProps {
   prompt?: string;
 }
 
 export function LoadingScreen({ prompt }: LoadingScreenProps) {
-  const steps = useMemo(
-    () => [
-      {
-        id: "analyze",
-        icon: BookOpen,
-        label: "Analyzing concept",
-        hint: "Breaking down your learning prompt into key ideas",
-        duration: 25,
-      },
-      {
-        id: "design",
-        icon: PenTool,
-        label: "Designing visuals",
-        hint: "Creating mathematical animations and diagrams",
-        duration: 35,
-      },
-      {
-        id: "animate",
-        icon: Play,
-        label: "Building animation",
-        hint: "Rendering smooth transitions and explanations",
-        duration: 30,
-      },
-      {
-        id: "finalize",
-        icon: CheckCircle,
-        label: "Finalizing lesson",
-        hint: "Adding narration and polishing the presentation",
-        duration: 10,
-      },
-    ],
-    [],
-  );
-
   const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [history, setHistory] = useState<number[]>([0]);
-
-  const thresholds = useMemo(() => {
-    let cumulative = 0;
-    return steps.map((step) => {
-      cumulative += step.duration;
-      return cumulative;
-    });
-  }, [steps]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -77,227 +27,74 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const nextIndex = thresholds.findIndex((threshold) => progress < threshold);
-    const resolvedIndex = nextIndex === -1 ? steps.length - 1 : nextIndex;
-
-    if (resolvedIndex !== currentStep) {
-      setCurrentStep(resolvedIndex);
-    }
-  }, [progress, thresholds, steps.length, currentStep]);
-
-  useEffect(() => {
-    setHistory((prev) => {
-      if (prev.includes(currentStep)) {
-        return prev;
-      }
-      return [...prev, currentStep];
-    });
-  }, [currentStep]);
-
-  const CurrentIcon = steps[currentStep]?.icon ?? BookOpen;
   const displayedProgress = Math.round(progress);
-  const safeHistory = history.filter((index) => steps[index]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center notebook-bg overflow-y-auto">
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
-      <div className="relative z-10 w-full max-w-5xl px-6 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative"
-        >
-          <Card className="overflow-hidden border-2 shadow-2xl">
-            <CardHeader className="text-center space-y-4 pb-8">
-              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <CurrentIcon className="w-8 h-8 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <CardTitle className="text-3xl font-serif">
-                  Crafting your{" "}
-                  <AnimatedGradientText
-                    className="text-3xl font-serif"
-                    colorFrom="#a3d9a1"
-                    colorTo="#3b8c5a"
-                    speed={2}
-                  >
-                    visual lesson
-                  </AnimatedGradientText>
-                </CardTitle>
-                <CardDescription className="text-lg max-w-2xl mx-auto">
-                  Transforming your prompt into an engaging mathematical animation with step-by-step explanations
-                </CardDescription>
-              </div>
-              {prompt && (
-                <div className="max-w-2xl mx-auto rounded-lg border bg-muted/50 p-4">
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-2">
-                    Learning prompt
-                  </span>
-                  <p className="text-sm leading-relaxed text-foreground/90">{prompt}</p>
-                </div>
-              )}
-            </CardHeader>
+    <div className={`fixed inset-0 z-[200] bg-bytelearn-back flex flex-col items-center justify-center overflow-hidden text-[#f0f4f2] ${sourceSerif.className}`}>
 
-            <CardContent className="space-y-8">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-semibold text-foreground">
-                      {steps[currentStep]?.label ?? "Preparing"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {steps[currentStep]?.hint}
-                    </p>
-                  </div>
-                  <span className="text-2xl font-bold text-primary">
-                    {displayedProgress}%
-                  </span>
-                </div>
-                <div className="relative h-3 overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
-                    initial={{ width: "0%" }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.8, ease: "easeInOut" }}
-                  />
-                </div>
-              </div>
+      {/* Background Grid */}
+      <div className="absolute inset-0 bg-bytelearn-spatial opacity-15 pointer-events-none animate-pan-grid"></div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {steps.map((step, index) => {
-                  const StepIcon = step.icon;
-                  const isActive = index === currentStep;
-                  const isComplete = index < currentStep;
-
-                  const previousThreshold = thresholds[index - 1] ?? 0;
-                  const steppedProgress = Math.max(
-                    Math.min(progress - previousThreshold, step.duration),
-                    0,
-                  );
-                  const relativeProgress =
-                    (steppedProgress / step.duration) * 100;
-
-                  return (
-                    <motion.div
-                      key={step.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className={`rounded-xl border-2 p-4 transition-all ${
-                        isActive
-                          ? "border-primary bg-primary/5 shadow-lg"
-                          : isComplete
-                          ? "border-secondary bg-secondary/5"
-                          : "border-muted bg-card/50"
-                      }`}
-                    >
-                      <div className="text-center space-y-3">
-                        <div
-                          className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                            isActive
-                              ? "bg-primary text-primary-foreground"
-                              : isComplete
-                              ? "bg-secondary text-secondary-foreground"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {isComplete ? (
-                            <CheckCircle className="w-6 h-6" />
-                          ) : (
-                            <StepIcon className="w-6 h-6" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm leading-tight">
-                            {step.label}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {step.hint}
-                          </p>
-                        </div>
-                        <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-                          <motion.div
-                            className={`h-full rounded-full transition-colors ${
-                              isComplete
-                                ? "bg-secondary"
-                                : isActive
-                                ? "bg-primary"
-                                : "bg-muted-foreground/30"
-                            }`}
-                            initial={{ width: 0 }}
-                            animate={{
-                              width: `${
-                                isComplete
-                                  ? 100
-                                  : isActive
-                                  ? relativeProgress
-                                  : 0
-                              }%`,
-                            }}
-                            transition={{ duration: 0.6, ease: "easeInOut" }}
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="space-y-3 rounded-lg border bg-muted/30 p-5">
-                  <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Progress log
-                  </p>
-                  <div className="space-y-3">
-                    {safeHistory.map((index) => {
-                      const step = steps[index];
-                      const StepIcon = step.icon;
-                      return (
-                        <div
-                          key={step.id}
-                          className="flex items-start gap-3 rounded-md border bg-background/80 px-4 py-3 shadow-sm"
-                        >
-                          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                            <StepIcon className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <p className="font-medium text-sm">{step.label}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {index < currentStep
-                                ? "✓ Completed"
-                                : index === currentStep
-                                ? "⟳ In progress"
-                                : "○ Queued"}
-                            </p>
-                          </div>
-                          {index < currentStep && (
-                            <Sparkles className="h-4 w-4 text-secondary mt-0.5" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="flex flex-col justify-between gap-4 rounded-lg border bg-muted/30 p-5">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                      What&apos;s happening?
-                    </p>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      We&apos;re using Manim to create beautiful mathematical animations that make complex concepts easy to understand. Your lesson will be ready for interactive learning soon.
-                    </p>
-                  </div>
-                  <p className="text-xs italic text-muted-foreground/80">
-                    💡 Pro tip: Keep this tab open for the fastest processing. We&apos;ll notify you when your visual lesson is complete!
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+      {/* Floating Background Nodes */}
+      <div className="absolute inset-0 z-[2] pointer-events-none">
+        <div className={`absolute w-[180px] p-3 border-[0.5px] border-[rgba(255,255,255,0.25)] bg-[rgba(0,48,73,0.4)] backdrop-blur-sm opacity-30 top-[20%] left-[15%] animate-float-1 text-[#a8b5ae] text-[9px] ${jetbrainsMono.className}`}>
+          [SYS] PARSING_PROMPT<br />
+          &gt; &quot;{prompt ? (prompt.length > 30 ? prompt.substring(0, 30) + '...' : prompt) : 'Visualizing concept...'}&quot;
+        </div>
+        <div className={`absolute w-[180px] p-3 border-[0.5px] border-[rgba(255,255,255,0.25)] bg-[rgba(0,48,73,0.4)] backdrop-blur-sm opacity-30 bottom-[25%] right-[12%] animate-float-2 text-[#a8b5ae] text-[9px] ${jetbrainsMono.className}`}>
+          [MEM] BUFFER_ALLOCATED<br />
+          &gt; 2.4GB / 4.0GB VRAM
+        </div>
+        <div className="absolute italic text-[48px] opacity-[0.03] pointer-events-none top-[10%] right-[10%]">ζ(s) = ∑ n⁻ˢ</div>
+        <div className="absolute italic text-[48px] opacity-[0.03] pointer-events-none bottom-[10%] left-[10%]">∫ exp(-x²) dx = √π</div>
       </div>
+
+      <nav className="fixed top-10 left-20 right-20 flex items-center justify-between z-[100]">
+        <div className="text-[20px] tracking-[0.1em] uppercase italic font-light">Byte Learn</div>
+      </nav>
+
+      <main className="flex-1 flex flex-col items-center justify-center relative z-10 w-full mt-20">
+
+        {/* Rendering Canvas */}
+        <div className="w-[600px] h-[400px] border border-[rgba(255,255,255,0.25)] bg-[rgba(0,0,0,0.2)] relative flex items-center justify-center mb-16 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+          <span className={`absolute -top-6 left-0 text-[10px] text-[#a8b5ae] uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>Live Construction: FRAME_0422.RAW</span>
+
+          <svg className="w-[120px] h-[120px] stroke-[#f0f4f2] stroke-[1.5] fill-none animate-draw" viewBox="0 0 100 100" style={{ animation: 'draw 8s linear infinite' }}>
+            <path d="M30,70 Q30,30 50,30 Q70,30 70,70 M40,30 L40,20 M60,30 L60,20 M35,45 Q50,40 65,45"></path>
+            <circle cx="43" cy="45" r="2" fill="currentColor"></circle>
+            <circle cx="57" cy="45" r="2" fill="currentColor"></circle>
+            <path d="M10,80 C30,80 40,20 90,20" opacity="0.4" strokeDasharray="4 4"></path>
+          </svg>
+
+          <svg className="absolute w-full h-full pointer-events-none">
+            <line x1="0" y1="200" x2="600" y2="200" stroke="rgba(255,255,255,0.05)" strokeWidth="1"></line>
+            <line x1="300" y1="0" x2="300" y2="400" stroke="rgba(255,255,255,0.05)" strokeWidth="1"></line>
+          </svg>
+        </div>
+
+        {/* Progress Section */}
+        <section className="w-[480px] flex flex-col gap-4">
+          <div className={`flex justify-between text-[11px] text-[#a8b5ae] uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>
+            <span>Rendering Frames...</span>
+            <span>{displayedProgress}%</span>
+          </div>
+
+          <div className="w-full h-[2px] bg-[rgba(255,255,255,0.25)] relative overflow-hidden">
+            <div
+              className="absolute top-0 left-0 h-full bg-[#f0f4f2] shadow-[0_0_10px_#f0f4f2] transition-all duration-500 animate-blink"
+              style={{ width: `${displayedProgress}%` }}
+            ></div>
+          </div>
+
+          <div className={`mt-8 text-[10px] text-[#a8b5ae] opacity-50 text-center leading-[2] ${jetbrainsMono.className}`}>
+            COMPILING SHADERS... DONE<br />
+            RESOLVING VECTOR MANIFOLDS... {((progress / 100) * 1.5).toFixed(2)}s<br />
+            OPTIMIZING ANIMATION PATHS... IN PROGRESS
+          </div>
+        </section>
+
+      </main>
+
     </div>
   );
 }

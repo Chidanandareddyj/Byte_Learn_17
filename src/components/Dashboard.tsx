@@ -92,7 +92,7 @@ export function Dashboard() {
     <div className="min-h-screen notebook-bg">
       <Navbar variant="app" />
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-6 py-8 mt-[80px]">
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="sticky top-24">
@@ -107,60 +107,60 @@ export function Dashboard() {
                     Describe what you want to learn and we&apos;ll create a visual explanation
                   </CardDescription>
                 </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="language" className="text-sm font-medium flex items-center gap-2">
-                    <Languages className="h-4 w-4" />
-                    Narration Language
-                  </label>
-                  <Select value={language} onValueChange={setLanguage} disabled={generateMutation.isPending}>
-                    <SelectTrigger id="language">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LANGUAGES.map((lang) => (
-                        <SelectItem key={lang.value} value={lang.value}>
-                          {lang.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Textarea
-                  placeholder="Example: Explain how derivatives work using the slope of a tangent line..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="min-h-32 resize-none focus:ring-2 focus:ring-primary/20 transition-all"
-                  data-testid="input-prompt"
-                  disabled={generateMutation.isPending}
-                />
-                <Button
-                  className="w-full group"
-                  onClick={handleGenerate}
-                  disabled={!prompt.trim() || generateMutation.isPending}
-                  data-testid="button-generate"
-                >
-                  {generateMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2 transition-transform group-hover:rotate-12" />
-                      Generate Learning Video
-                    </>
-                  )}
-                </Button>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p className="font-medium">Tips:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Be specific about the concept</li>
-                    <li>Mention the level (beginner/advanced)</li>
-                    <li>Include examples if helpful</li>
-                  </ul>
-                </div>
-              </CardContent>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="language" className="text-sm font-medium flex items-center gap-2">
+                      <Languages className="h-4 w-4" />
+                      Narration Language
+                    </label>
+                    <Select value={language} onValueChange={setLanguage} disabled={generateMutation.isPending}>
+                      <SelectTrigger id="language">
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LANGUAGES.map((lang) => (
+                          <SelectItem key={lang.value} value={lang.value}>
+                            {lang.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Textarea
+                    placeholder="Example: Explain how derivatives work using the slope of a tangent line..."
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    className="min-h-32 resize-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    data-testid="input-prompt"
+                    disabled={generateMutation.isPending}
+                  />
+                  <Button
+                    className="w-full group"
+                    onClick={handleGenerate}
+                    disabled={!prompt.trim() || generateMutation.isPending}
+                    data-testid="button-generate"
+                  >
+                    {generateMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2 transition-transform group-hover:rotate-12" />
+                        Generate Learning Video
+                      </>
+                    )}
+                  </Button>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p className="font-medium">Tips:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Be specific about the concept</li>
+                      <li>Mention the level (beginner/advanced)</li>
+                      <li>Include examples if helpful</li>
+                    </ul>
+                  </div>
+                </CardContent>
               </Card>
             </div>
           </div>

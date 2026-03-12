@@ -11,12 +11,12 @@ const isPublicRoute = createRouteMatcher([
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
-  
+
   // If user is authenticated and trying to access root or auth pages, redirect to dashboard
   if (userId && (req.nextUrl.pathname === '/' || req.nextUrl.pathname.startsWith('/sign-in') || req.nextUrl.pathname.startsWith('/sign-up'))) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
-  
+
   // Protect all routes except public ones
   if (!isPublicRoute(req)) {
     await auth.protect()

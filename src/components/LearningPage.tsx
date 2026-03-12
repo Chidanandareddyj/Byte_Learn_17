@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { RefreshCw, Download, Share2, ChevronDown, ChevronUp, Loader2, Clock, Film } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
+const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["300", "400", "500"], style: ["normal", "italic"] });
 
 type VideoStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
 
@@ -25,7 +26,6 @@ interface Video {
 }
 
 export function LearningPage() {
-  const [showTranscript, setShowTranscript] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const searchParams = useSearchParams();
   const videoId = searchParams.get("id") ?? undefined;
@@ -43,7 +43,6 @@ export function LearningPage() {
       query.state.data?.status !== "COMPLETED" ? 5000 : false,
   });
 
-  // Timer for elapsed time during processing
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -66,15 +65,11 @@ export function LearningPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Calculate progress percentage based on elapsed time and estimated duration
   const getProgressPercentage = () => {
     if (video?.status === "QUEUED") {
-      // Slowly increase from 10% to 25% while queued
       return Math.min(10 + (elapsedTime * 0.5), 25);
     } else if (video?.status === "PROCESSING") {
-      // Start at 25% and gradually increase to 90% over 4 minutes (240 seconds)
-      // Never reach 100% until actually completed
-      const estimatedDuration = 240; // 4 minutes in seconds
+      const estimatedDuration = 240;
       const progress = 25 + ((elapsedTime / estimatedDuration) * 65);
       return Math.min(progress, 90);
     }
@@ -87,250 +82,286 @@ export function LearningPage() {
 
   if (!video) {
     return (
-      <div className="min-h-screen notebook-bg">
+      <div className={`min-h-screen bg-bytelearn-back text-[#f0f4f2] ${sourceSerif.className} flex flex-col`}>
         <Navbar variant="app" />
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <Card className="p-8 text-center">
-            <p className="text-muted-foreground">Video not found</p>
-          </Card>
+        <div className="flex items-center justify-center flex-1">
+          <div className="p-8 text-center text-[#a8b5ae] border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.2)]">
+            <p>Error: Video not found</p>
+          </div>
         </div>
       </div>
     );
   }
 
   const isFailed = video.status === "FAILED";
-  const failureReason = video.errorMessage || "The rendering service reported an error.";
+  const isCompleted = video.status === "COMPLETED";
+
+  const paragraphs = video.explanation ? video.explanation.split('\n\n') : [];
+  const chapters = paragraphs.filter(p => p.match(/^\[Scene (\d+)\]/)).map(p => {
+      const match = p.match(/^\[Scene (\d+)\]/);
+      const content = p.replace(/^\[Scene \d+\]\n?/, '');
+      return { scene: match ? match[1] : '', content };
+  });
+  
+  const generalExplanation = paragraphs.find(p => !p.match(/^\[Scene /) && p.length > 20) || "Generating intuitive visualization of the mathematical concept. Exploring algorithmic structures...";
 
   return (
-    <div className="min-h-screen notebook-bg">
+    <div className={`h-screen bg-bytelearn-back text-[#f0f4f2] ${sourceSerif.className} flex flex-col overflow-hidden`}>
       <Navbar variant="app" />
-
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid gap-8 lg:grid-cols-5">
-          <div className="lg:col-span-3 space-y-6">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Status:</span>
-              <span
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
-                  video.status === "COMPLETED"
-                    ? "bg-primary/10 text-primary"
-                    : video.status === "FAILED"
-                    ? "bg-destructive/10 text-destructive"
-                    : "bg-secondary/10 text-secondary"
-                }`}
-              >
-                {video.status === "COMPLETED" && "Ready"}
-                {video.status === "PROCESSING" && "Processing"}
-                {video.status === "QUEUED" && "Queued"}
-                {video.status === "FAILED" && "Failed"}
-              </span>
-            </div>
-            <div className="aspect-video rounded-xl overflow-hidden bg-muted border shadow-lg">
-              {video.status === "COMPLETED" && video.videoUrl ? (
-                <video
-                  src={video.videoUrl}
-                  controls
-                  className="w-full h-full object-cover"
-                  data-testid="video-player"
-                  controlsList="nodownload"
-                >
-                  Your browser does not support the video tag.
-                </video>
-              ) : isFailed ? (
-                <div className="w-full h-full flex flex-col items-center justify-center text-center px-6">
-                  <p className="font-semibold text-destructive">We could not finish the video.</p>
-                  <p className="mt-2 text-sm text-muted-foreground max-w-md">{failureReason}</p>
-                </div>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-6 px-6">
-                  
-
-                  {/* Status message */}
-                  <div className="text-center space-y-2">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {video.status === "QUEUED" ? "Your video is queued" : "Generating your video"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground max-w-md">
-                      {video.status === "QUEUED" 
-                        ? "Your video is in the queue and will start processing shortly..."
-                        : "We're creating your educational video with animations and narration..."
-                      }
-                    </p>
-                  </div>
-
-                  {/* Timer and estimated time */}
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span>Elapsed: {formatTime(elapsedTime)}</span>
+      
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] h-[calc(100vh-80px)] mt-[80px]">
+        
+        {/* Left Player Area */}
+        <section className="p-8 lg:p-10 flex flex-col border-r border-[rgba(255,255,255,0.2)] overflow-y-auto relative custom-scrollbar">
+            <div className="absolute inset-0 bg-bytelearn-spatial opacity-10 pointer-events-none"></div>
+            
+            <div className="w-full aspect-video bg-black relative border border-[rgba(255,255,255,0.2)] flex items-center justify-center mb-6 overflow-hidden shadow-2xl shrink-0">
+                {!isCompleted && !isFailed && (
+                   <div className="absolute inset-0 bg-bytelearn-spatial opacity-20" style={{ backgroundSize: '40px 40px' }}></div>
+                )}
+                
+                {isCompleted && video.videoUrl ? (
+                    <CustomVideoPlayer url={video.videoUrl} />
+                ) : isFailed ? (
+                    <div className="relative z-10 text-center text-[#ff3333] flex flex-col items-center">
+                        <span className="text-4xl italic mb-4">FAILED TO COMPILE</span>
+                        <div className={`text-[10px] uppercase font-mono tracking-widest text-[#a8b5ae] ${jetbrainsMono.className}`}>
+                            {video.errorMessage || "System error during visualization compiling."}
+                        </div>
                     </div>
-                    <div className="h-4 w-px bg-border" />
-                    <div className="text-muted-foreground">
-                      <span>Est. time: 4-6 min</span>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="w-full max-w-md space-y-2">
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-                        style={{ 
-                          width: `${getProgressPercentage()}%`
-                        }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>
-                        {video.status === "QUEUED" ? "Waiting in queue..." : "Processing video..."}
-                      </span>
-                      <span className="font-medium">
-                        {Math.round(getProgressPercentage())}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => window.location.reload()} data-testid="button-regenerate">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Regenerate
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  if (video.videoUrl) {
-                    window.open(video.videoUrl, '_blank');
-                  }
-                }} 
-                data-testid="button-download"
-                disabled={!video.videoUrl || video.status !== "COMPLETED"}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  if (navigator.share && video.videoUrl) {
-                    navigator.share({
-                      title: video.title,
-                      text: video.prompt,
-                      url: window.location.href,
-                    });
-                  }
-                }} 
-                data-testid="button-share"
-              >
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-            </div>
-
-            <Card>
-              <button
-                onClick={() => setShowTranscript(!showTranscript)}
-                className="w-full px-6 py-4 flex items-center justify-between hover-elevate"
-                data-testid="button-toggle-transcript"
-              >
-                <span className="font-semibold">Transcript</span>
-                {showTranscript ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-              </button>
-              {showTranscript && (
-                <div className="px-6 pb-6 space-y-3 text-sm text-muted-foreground" data-testid="text-transcript">
-                  {video.narration.split("\n\n").map((paragraph: string, idx: number) => (
-                    <p key={idx}>{paragraph}</p>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
-
-          <div className="lg:col-span-2">
-            <Card className="sticky top-24">
-              <div className="p-6 border-b">
-                <h2 className="text-xl font-bold" data-testid="text-explanation-title">{video.title}</h2>
-                <p className="text-sm text-muted-foreground mt-1">Generated explanation</p>
-              </div>
-              <ScrollArea className="h-[calc(100vh-16rem)]">
-                <div className="p-6">
-                  <div className="space-y-6">
-                    {/* Original Prompt */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                        Your Prompt
-                      </h3>
-                      <div className="rounded-lg bg-muted/50 p-4 border-l-4 border-primary">
-                        <p className="text-sm leading-relaxed text-foreground/90">
-                          {video.prompt}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Explanation */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                        Explanation
-                      </h3>
-                      <div className="space-y-4">
-                        {video.explanation.split('\n\n').map((paragraph: string, index: number) => {
-                          // Check if paragraph starts with a scene marker
-                          const sceneMatch = paragraph.match(/^\[Scene (\d+)\]/);
-
-                          if (sceneMatch) {
-                            const sceneNumber = sceneMatch[1];
-                            const content = paragraph.replace(/^\[Scene \d+\]\n?/, '');
-
-                            return (
-                              <div key={index} className="space-y-2" data-testid={`section-scene-${sceneNumber}`}>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                                    {sceneNumber}
-                                  </div>
-                                  <div className="h-px bg-border flex-1"></div>
-                                </div>
-                                <div className="ml-9">
-                                  <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
-                                    {content}
-                                  </p>
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          // Check for section headers (lines that are short and end with colon)
-                          if (paragraph.length < 50 && paragraph.includes(':')) {
-                            return (
-                              <div key={index} className="space-y-2">
-                                <h4 className="text-sm font-semibold text-foreground">
-                                  {paragraph}
-                                </h4>
-                              </div>
-                            );
-                          }
-
-                          // Regular paragraph with better formatting
-                          return (
-                            <div key={index} className="space-y-2">
-                              <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
-                                {paragraph}
-                              </p>
+                ) : (
+                    <div className="relative w-full h-full flex flex-col items-center justify-center">
+                        <div className="text-[48px] italic text-[#f0f4f2] opacity-30 pointer-events-none drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] absolute">
+                            ∫<sub className="text-[20px] ml-1">Γ</sub> f(z) dz = 0
+                        </div>
+                        
+                        <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black to-transparent flex flex-col gap-3">
+                            <div className="h-[2px] bg-[rgba(255,255,255,0.2)] relative overflow-hidden">
+                                <div className="absolute top-0 left-0 h-full bg-[#f0f4f2] transition-all duration-500 shadow-[0_0_10px_#f0f4f2]" style={{ width: `${getProgressPercentage()}%` }}></div>
                             </div>
-                          );
-                        })}
-                      </div>
+                            <div className={`flex items-center justify-between text-[10px] tracking-[0.1em] text-[#a8b5ae] uppercase ${jetbrainsMono.className}`}>
+                                <div>{video.status === 'QUEUED' ? 'AWAITING RESOURCES [DISPATCH]' : 'COMPILING SCENES [RENDER]'}</div>
+                                <div>{formatTime(elapsedTime)} / ~04:00</div>
+                                <div>MathRenderer // GEN_04</div>
+                            </div>
+                        </div>
                     </div>
-                  </div>
+                )}
+            </div>
+
+            <div className="relative z-10 flex-col flex gap-2">
+                <h1 className="text-3xl font-light italic mb-1">{video.title}</h1>
+                <div className={`flex gap-6 text-[11px] text-[#a8b5ae] border-b border-[rgba(255,255,255,0.2)] pb-5 mb-5 uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>
+                    <span>ID: DERIVATION_{video.id?.[0]?.toUpperCase() ?? 'X'}{video.id?.slice(-4)?.toUpperCase() ?? '0000'}</span>
+                    <span>PUBLISHED: {format(new Date(video.createdAt || Date.now()), 'MM.dd.yy')}</span>
+                    <span>VIEWS: 0</span>
                 </div>
-              </ScrollArea>
-            </Card>
-          </div>
-        </div>
-      </div>
+                
+                <p className="text-[16px] leading-[1.6] opacity-90 max-w-4xl">
+                    {generalExplanation}
+                </p>
+                
+                <div className="mt-8 space-y-4 max-w-4xl border-t border-[rgba(255,255,255,0.1)] pt-6">
+                    {chapters.length === 0 ? (
+                        video.explanation?.split('\n\n').filter(p => p !== generalExplanation && !p.match(/^\[Scene /)).map((p, idx) => (
+                            <p key={idx} className="text-[15px] text-[#a8b5ae] leading-relaxed">{p}</p>
+                        ))
+                    ) : (
+                        chapters.map((chap, idx) => (
+                             <div key={idx} className="mb-4 text-[#a8b5ae] text-[15px] leading-[1.6]">
+                                 <strong className="text-[#f0f4f2] font-normal italic pr-2">Scene {chap.scene}:</strong>
+                                 {chap.content}
+                             </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </section>
+
+        {/* Right Sidebar Area */}
+        <aside className="bg-[rgba(0,0,0,0.2)] flex flex-col overflow-y-auto border-l border-[rgba(255,255,255,0.1)] custom-scrollbar">
+            
+            {/* Structural Chapters Overview */}
+            <div className="p-8 border-b border-[rgba(255,255,255,0.2)]">
+                <div className={`text-[11px] text-[#a8b5ae] uppercase mb-5 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
+                    <div className="w-1 h-1 bg-[#f0f4f2]"></div>
+                    Structural Chapters
+                </div>
+                
+                {chapters.length > 0 ? (
+                    <ul className="list-none flex flex-col text-[14px]">
+                        {chapters.map((chap, idx) => (
+                            <li key={idx} className={`flex justify-between py-3 border-b border-[rgba(255,255,255,0.1)] last:border-0 ${idx === 0 ? 'text-[#f0f4f2] italic' : 'text-[#a8b5ae]'}`}>
+                                <span className="truncate pr-4">{String(idx + 1).padStart(2,'0')}. {chap.content.split(' ').slice(0, 4).join(' ')}...</span>
+                                <span className={`text-[10px] mt-1 shrink-0 ${jetbrainsMono.className}`}>00:00</span>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div className={`text-[10px] text-[#a8b5ae] italic ${jetbrainsMono.className}`}>
+                        [AWAITING_STRUCTURAL_ANALYSIS]
+                    </div>
+                )}
+            </div>
+
+            {/* Active Axioms (Prompt) */}
+            <div className="p-8 border-b border-[rgba(255,255,255,0.2)]">
+                <div className={`text-[11px] text-[#a8b5ae] uppercase mb-5 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
+                    <div className="w-1 h-1 bg-[#f0f4f2]"></div>
+                    Learning Prompt
+                </div>
+                
+                <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.2)] p-5 mb-4 text-center text-[18px] italic leading-relaxed break-words">
+                    {video.prompt}
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                    <span className={`text-[9px] px-2 py-1 border border-[rgba(255,255,255,0.2)] text-[#a8b5ae] uppercase tracking-wide ${jetbrainsMono.className}`}>User_Input</span>
+                    <span className={`text-[9px] px-2 py-1 border border-[rgba(255,255,255,0.2)] text-[#a8b5ae] uppercase tracking-wide ${jetbrainsMono.className}`}>Prompt</span>
+                </div>
+            </div>
+
+            {/* Narration Transcript */}
+            <div className="p-8">
+                <div className={`text-[11px] text-[#a8b5ae] uppercase mb-5 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
+                    <div className="w-1 h-1 bg-[#f0f4f2]"></div>
+                    Narration Transcript
+                </div>
+                
+                <div className="space-y-4 text-[13px] text-[#a8b5ae] opacity-80 leading-relaxed border-l border-[rgba(255,255,255,0.1)] pl-4">
+                    {video.narration ? (
+                        video.narration.split('\n\n').map((p, idx) => (
+                            <p key={idx}>{p}</p>
+                        ))
+                    ) : (
+                        <p className={`text-[10px] italic ${jetbrainsMono.className}`}>[GENERATING_VOCAL_TRACT...]</p>
+                    )}
+                </div>
+            </div>
+            
+        </aside>
+      </main>
+      
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.4);
+        }
+      `}} />
     </div>
   );
+}
+
+function CustomVideoPlayer({ url }: { url: string }) {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+
+    useEffect(() => {
+        if (!videoElement) return;
+
+        const handleTimeUpdate = () => {
+            setCurrentTime(videoElement.currentTime);
+            setProgress((videoElement.currentTime / videoElement.duration) * 100);
+        };
+
+        const handleLoadedMetadata = () => {
+            setDuration(videoElement.duration);
+        };
+
+        const handleEnded = () => {
+            setIsPlaying(false);
+        };
+
+        videoElement.addEventListener('timeupdate', handleTimeUpdate);
+        videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+        videoElement.addEventListener('ended', handleEnded);
+
+        return () => {
+            videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+            videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            videoElement.removeEventListener('ended', handleEnded);
+        };
+    }, [videoElement]);
+
+    const togglePlay = () => {
+        if (!videoElement) return;
+        if (isPlaying) {
+            videoElement.pause();
+        } else {
+            videoElement.play();
+        }
+        setIsPlaying(!isPlaying);
+    };
+
+    const formatTime = (timeInSeconds: number) => {
+        if (isNaN(timeInSeconds)) return "00:00";
+        const m = Math.floor(timeInSeconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(timeInSeconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    };
+
+    return (
+        <div className="relative w-full h-full group" onClick={togglePlay}>
+            <video
+                ref={setVideoElement}
+                src={url}
+                className="w-full h-full object-contain relative z-10"
+                controlsList="nodownload"
+            />
+            
+            {/* Overlay Gradient (appears on hover or when paused) */}
+            <div className={`absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[rgba(0,0,0,0.8)] to-transparent z-20 flex flex-col gap-3 transition-opacity duration-300 ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
+                
+                {/* Progress Bar */}
+                <div className="h-[2px] bg-[rgba(255,255,255,0.2)] relative cursor-pointer" onClick={(e) => {
+                    e.stopPropagation();
+                    if (!videoElement) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const pos = (e.clientX - rect.left) / rect.width;
+                    videoElement.currentTime = pos * videoElement.duration;
+                }}>
+                    <div 
+                        className="absolute top-0 left-0 h-full bg-[#f0f4f2] transition-all duration-100" 
+                        style={{ width: `${progress}%` }}
+                    />
+                </div>
+                
+                {/* Controls Row */}
+                <div className={`flex items-center justify-between text-[10px] tracking-[0.1em] text-[#f0f4f2] font-mono uppercase ${jetbrainsMono.className}`}>
+                    <div className="cursor-pointer hover:text-white" onClick={(e) => { e.stopPropagation(); togglePlay(); }}>
+                        PLAY // PAUSE [SPACE]
+                    </div>
+                    <div className="text-[#a8b5ae]">
+                        {formatTime(currentTime)} / {formatTime(duration)}
+                    </div>
+                    <div className="text-[#a8b5ae]">
+                        HD // 60 FPS
+                    </div>
+                </div>
+            </div>
+
+            {/* Big Center Play Icon when paused */}
+            {!isPlaying && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+                    <div className="w-16 h-16 rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.4)] backdrop-blur-sm flex items-center justify-center">
+                        <div className="w-0 h-0 border-t-8 border-t-transparent border-l-[12px] border-l-[#f0f4f2] border-b-8 border-b-transparent ml-1"></div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }
 
 

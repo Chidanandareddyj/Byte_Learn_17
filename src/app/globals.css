@@ -4,50 +4,60 @@
 
 /* Design tokens ported from the existing Vite app to match UI */
 :root {
+  /* Theorum Design Variables */
+  --bg-deep: #003049; 
+  --bg-mid: #004266;
+  --bg-light: #005482;
+  --text-primary: #f0f4f2; 
+  --text-secondary: #a8b5ae; 
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --chalk-line: rgba(255, 255, 255, 0.15);
+
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
   --opaque-button-border-intensity: -8;
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 40 15% 98%;
-  --foreground: 220 15% 20%;
-  --border: 210 10% 92%;
-  --card: 0 0% 100%;
-  --card-foreground: 220 15% 20%;
-  --card-border: 210 8% 95%;
-  --sidebar: 40 12% 96%;
-  --sidebar-foreground: 220 15% 20%;
-  --sidebar-border: 210 10% 90%;
-  --sidebar-primary: 210 60% 65%;
-  --sidebar-primary-foreground: 210 10% 98%;
-  --sidebar-accent: 40 10% 92%;
-  --sidebar-accent-foreground: 220 15% 25%;
-  --sidebar-ring: 210 60% 65%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 220 15% 20%;
-  --popover-border: 210 10% 92%;
-  --primary: 210 60% 65%;
-  --primary-foreground: 210 10% 98%;
-  --secondary: 150 45% 60%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 210 15% 94%;
-  --muted-foreground: 220 10% 50%;
-  --accent: 150 45% 60%;
-  --accent-foreground: 0 0% 100%;
+  --background: 201 100% 14%; /* #003049 */
+  --foreground: 150 20% 95%; /* #f0f4f2 */
+  --border: 201 100% 25%;
+  --card: 201 100% 14%;
+  --card-foreground: 150 20% 95%;
+  --card-border: 201 100% 25%;
+  --sidebar: 201 100% 14%;
+  --sidebar-foreground: 150 20% 95%;
+  --sidebar-border: 201 100% 25%;
+  --sidebar-primary: 150 20% 95%;
+  --sidebar-primary-foreground: 201 100% 14%;
+  --sidebar-accent: 201 100% 20%; /* #004266 */
+  --sidebar-accent-foreground: 150 20% 95%;
+  --sidebar-ring: 150 20% 95%;
+  --popover: 201 100% 16%; 
+  --popover-foreground: 150 20% 95%;
+  --popover-border: 201 100% 25%;
+  --primary: 150 20% 95%;
+  --primary-foreground: 201 100% 14%;
+  --secondary: 201 100% 20%;
+  --secondary-foreground: 150 20% 95%;
+  --muted: 201 100% 20%;
+  --muted-foreground: 150 10% 67%; /* #a8b5ae */
+  --accent: 201 100% 20%;
+  --accent-foreground: 150 20% 95%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 10% 98%;
-  --input: 210 12% 80%;
-  --ring: 210 60% 65%;
-  --chart-1: 210 60% 60%;
+  --input: 201 100% 25%;
+  --ring: 150 20% 95%;
+  --chart-1: 150 20% 95%;
   --chart-2: 150 45% 55%;
   --chart-3: 280 50% 60%;
   --chart-4: 30 70% 55%;
   --chart-5: 340 65% 55%;
-  --font-sans: Inter, sans-serif;
-  --font-serif: Poppins, serif;
-  --font-mono: JetBrains Mono, monospace;
-  --radius: .5rem;
+  --font-sans: 'Source Serif 4', serif;
+  --font-serif: 'Source Serif 4', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 0rem; /* Flat borders by default for Theorum */
 }
 
 .dark {
@@ -56,36 +66,36 @@
   --opaque-button-border-intensity: 9;
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
-  --background: 220 15% 12%;
-  --foreground: 210 10% 95%;
-  --border: 220 12% 20%;
-  --card: 220 15% 16%;
-  --card-foreground: 210 10% 95%;
-  --card-border: 220 12% 22%;
-  --sidebar: 220 15% 14%;
-  --sidebar-foreground: 210 10% 95%;
-  --sidebar-border: 220 12% 19%;
-  --sidebar-primary: 210 60% 70%;
-  --sidebar-primary-foreground: 210 10% 98%;
-  --sidebar-accent: 220 15% 20%;
-  --sidebar-accent-foreground: 210 10% 90%;
-  --sidebar-ring: 210 60% 70%;
-  --popover: 220 15% 18%;
-  --popover-foreground: 210 10% 95%;
-  --popover-border: 220 12% 24%;
-  --primary: 210 60% 70%;
-  --primary-foreground: 210 10% 98%;
-  --secondary: 150 45% 65%;
-  --secondary-foreground: 220 15% 12%;
-  --muted: 220 15% 20%;
-  --muted-foreground: 220 8% 65%;
-  --accent: 150 45% 65%;
-  --accent-foreground: 220 15% 12%;
+  --background: 201 100% 14%; /* #003049 */
+  --foreground: 150 20% 95%; /* #f0f4f2 */
+  --border: 201 100% 25%;
+  --card: 201 100% 14%;
+  --card-foreground: 150 20% 95%;
+  --card-border: 201 100% 25%;
+  --sidebar: 201 100% 14%;
+  --sidebar-foreground: 150 20% 95%;
+  --sidebar-border: 201 100% 25%;
+  --sidebar-primary: 150 20% 95%;
+  --sidebar-primary-foreground: 201 100% 14%;
+  --sidebar-accent: 201 100% 20%;
+  --sidebar-accent-foreground: 150 20% 95%;
+  --sidebar-ring: 150 20% 95%;
+  --popover: 201 100% 16%;
+  --popover-foreground: 150 20% 95%;
+  --popover-border: 201 100% 25%;
+  --primary: 150 20% 95%;
+  --primary-foreground: 201 100% 14%;
+  --secondary: 201 100% 20%;
+  --secondary-foreground: 150 20% 95%;
+  --muted: 201 100% 20%;
+  --muted-foreground: 150 10% 67%; /* #a8b5ae */
+  --accent: 201 100% 20%;
+  --accent-foreground: 150 20% 95%;
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 10% 98%;
-  --input: 220 15% 35%;
-  --ring: 210 60% 70%;
-  --chart-1: 210 60% 70%;
+  --input: 201 100% 25%;
+  --ring: 150 20% 95%;
+  --chart-1: 150 20% 95%;
   --chart-2: 150 45% 65%;
   --chart-3: 280 50% 70%;
   --chart-4: 30 70% 65%;
@@ -101,15 +111,17 @@
 @layer utilities {
   .notebook-bg {
     background-image:
-      linear-gradient(rgba(210, 210, 220, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(210, 210, 220, 0.03) 1px, transparent 1px);
-    background-size: 20px 20px;
+      linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px);
+    background-size: 60px 60px;
+    background-color: var(--bg-deep, #003049);
   }
   .dark .notebook-bg {
     background-image:
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-    background-size: 20px 20px;
+      linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px);
+    background-size: 60px 60px;
+    background-color: var(--bg-deep, #003049);
   }
 }
 
@@ -196,5 +208,80 @@
 
   .animate-spin-around {
     animation: spin-around calc(var(--speed) * 2) infinite linear;
+  }
+
+  /* Byte Learn Landing Page Utilities and Animations */
+  @keyframes draw {
+    from { stroke-dashoffset: 1000; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes fade-slide-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-20px) rotate(2deg); }
+  }
+  @keyframes float-reverse {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(20px) rotate(-2deg); }
+  }
+  @keyframes pan-grid {
+    from { background-position: 0 0; }
+    to { background-position: 80px 80px; }
+  }
+  @keyframes shimmer {
+    from { left: -100%; }
+    to { left: 200%; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes equation-pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(240, 244, 242, 0.0); border-color: rgba(240, 244, 242, 0.3); }
+    50% { box-shadow: 0 0 30px rgba(240, 244, 242, 0.2); border-color: rgba(240, 244, 242, 0.8); }
+  }
+
+  .animate-draw {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: draw 4s ease-out forwards;
+  }
+  .animate-fade-slide-up-1 { opacity: 0; animation: fade-slide-up 0.8s ease-out forwards; animation-delay: 0.1s; }
+  .animate-fade-slide-up-2 { opacity: 0; animation: fade-slide-up 0.8s ease-out forwards; animation-delay: 0.3s; }
+  .animate-fade-slide-up-3 { opacity: 0; animation: fade-slide-up 0.8s ease-out forwards; animation-delay: 0.5s; }
+  .animate-fade-slide-up-4 { opacity: 0; animation: fade-slide-up 0.8s ease-out forwards; animation-delay: 0.7s; }
+  .animate-float-1 { animation: float 12s ease-in-out infinite; }
+  .animate-float-2 { animation: float-reverse 10s ease-in-out infinite alternate; }
+  .animate-float-3 { animation: float 14s ease-in-out infinite; }
+  .animate-float-4 { animation: float-reverse 11s ease-in-out infinite alternate; }
+  .animate-pan-grid { animation: pan-grid 60s linear infinite; }
+  .animate-shimmer { position: relative; overflow: hidden; }
+  .animate-shimmer::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 50%; height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent);
+    transform: skewX(-20deg);
+    animation: shimmer 6s infinite;
+  }
+  .animate-blink { animation: blink 1s step-end infinite; }
+  .animate-equation-pulse { animation: equation-pulse 4s infinite alternate; }
+
+  .bg-bytelearn-back {
+    background-color: #003049;
+    background-image: 
+      radial-gradient(circle at 50% 50%, #004266 0%, transparent 80%),
+      url("https://www.transparenttextures.com/patterns/black-linen.png");
+  }
+  .bg-bytelearn-spatial {
+    background-image: 
+      linear-gradient(rgba(255, 255, 255, 0.25) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.25) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(circle at 50% 50%, black, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, black, transparent 80%);
   }
 }
