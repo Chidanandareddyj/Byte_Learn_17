@@ -82,7 +82,7 @@ export function Navbar({ variant = "landing" }: NavbarProps) {
     <nav className="h-[80px] px-6 md:px-10 flex items-center justify-between border-b border-[rgba(255,255,255,0.15)] z-[100] bg-bytelearn-back fixed top-0 w-full left-0">
       <Link href="/" className="flex items-center gap-3 transition-transform hover:-translate-y-0.5" data-testid="link-home">
         <GraduationCap className="h-6 w-6 text-[#f0f4f2]" />
-        <span className={`hidden sm:inline-block text-[#f0f4f2] text-[20px] tracking-[0.05em] uppercase italic font-light ${sourceSerif.className}`}>ByteLearn</span>
+        <span className={`text-[#f0f4f2] text-[20px] tracking-[0.05em] uppercase italic font-light ${sourceSerif.className}`}>ByteLearn</span>
       </Link>
 
       <div className="flex items-center gap-4 md:gap-6">
