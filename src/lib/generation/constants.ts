@@ -1,32 +1,80 @@
-import { Type } from "@google/genai";
+// Gemini schema import retained for rollback:
+// import { Type } from "@google/genai";
+
+/*
+ * Previous Gemini response schema (disabled):
+ *
+ * export const geminiScriptGenerationSchema = {
+ *   type: Type.OBJECT,
+ *   properties: {
+ *     title: {
+ *       type: Type.STRING,
+ *       description: "Concise, engaging video title.",
+ *     },
+ *     explanation: {
+ *       type: Type.STRING,
+ *       description: "Brief explanation of the concept (2-3 sentences).",
+ *     },
+ *     scenes: {
+ *       type: Type.ARRAY,
+ *       description: "15-20 Manim scenes for a 4-5 minute video.",
+ *       items: {
+ *         type: Type.OBJECT,
+ *         properties: {
+ *           sceneNumber: {
+ *             type: Type.NUMBER,
+ *             description: "Scene number (1,2,3...)",
+ *           },
+ *           manimScript: {
+ *             type: Type.STRING,
+ *             description: "Python Manim code. CRITICAL: Total animation time MUST equal the duration field. Use run_time=2-4 for animations and add self.wait(2-3) between steps. Example: for 30s scene, use 3 animations with run_time=3 each plus self.wait(2) between = 9+9+9+3 = 30s.",
+ *           },
+ *           narration: {
+ *             type: Type.STRING,
+ *             description: "Voice-over matching duration. At 3 words/sec: 30s=90 words, 40s=120 words. Count your words!",
+ *           },
+ *           duration: {
+ *             type: Type.NUMBER,
+ *             description: "Scene duration 25-40 seconds. Animation time MUST match this exactly.",
+ *           },
+ *         },
+ *         required: ["sceneNumber", "manimScript", "narration", "duration"],
+ *       },
+ *     },
+ *   },
+ *   required: ["title", "explanation", "scenes"],
+ * };
+ */
 
 export const scriptGenerationSchema = {
-  type: Type.OBJECT,
+  type: "object",
+  additionalProperties: false,
   properties: {
     title: {
-      type: Type.STRING,
+      type: "string",
       description: "Concise, engaging video title.",
     },
     explanation: {
-      type: Type.STRING,
+      type: "string",
       description: "Brief explanation of the concept (2-3 sentences).",
     },
     scenes: {
-      type: Type.ARRAY,
+      type: "array",
       description: "15-20 Manim scenes for a 4-5 minute video.",
       items: {
-        type: Type.OBJECT,
+        type: "object",
+        additionalProperties: false,
         properties: {
-          sceneNumber: { type: Type.NUMBER, description: "Scene number (1,2,3...)" },
+          sceneNumber: { type: "number", description: "Scene number (1,2,3...)" },
           manimScript: {
-            type: Type.STRING,
+            type: "string",
             description: "Python Manim code. CRITICAL: Total animation time MUST equal the duration field. Use run_time=2-4 for animations and add self.wait(2-3) between steps. Example: for 30s scene, use 3 animations with run_time=3 each plus self.wait(2) between = 9+9+9+3 = 30s.",
           },
           narration: {
-            type: Type.STRING,
+            type: "string",
             description: "Voice-over matching duration. At 3 words/sec: 30s=90 words, 40s=120 words. Count your words!",
           },
-          duration: { type: Type.NUMBER, description: "Scene duration 25-40 seconds. Animation time MUST match this exactly." },
+          duration: { type: "number", description: "Scene duration 25-40 seconds. Animation time MUST match this exactly." },
         },
         required: ["sceneNumber", "manimScript", "narration", "duration"],
       },

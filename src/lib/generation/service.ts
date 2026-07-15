@@ -1,4 +1,5 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+// Gemini integration is intentionally paused. LLM calls now use GitHub Models.
+// import { GoogleGenAI, Modality } from "@google/genai";
 // import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
@@ -13,7 +14,7 @@ import type {
 import { prisma } from "@/lib/prisma";
 
 import { scriptGenerationSchema, systemInstruction } from "./constants";
-import { generateUniqueId, retryWithBackoff, createWavFile } from "./utils";
+import { createWavFile, generateUniqueId, retryWithBackoff } from "./utils";
 
 // Type for AI response
 type AIScriptResponse = {
@@ -24,25 +25,111 @@ type AIScriptResponse = {
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 const ENABLE_TTS = process.env.ENABLE_TTS === "true";
+const GITHUB_MODELS_ENDPOINT =
+  "https://models.github.ai/inference/chat/completions";
+const DEFAULT_GITHUB_MODEL = "openai/o4-mini";
+const DEFAULT_DEEPGRAM_VOICE = "aura-2-thalia-en";
 const DEFAULT_TEST_AUDIO_URL =
   process.env.TEST_AUDIO_URL ??
   "https://geruuvhlyduaoelpwqbj.supabase.co/storage/v1/object/public/audio/1761579733647-c21w24i.mp3";
 
-let aiClient: GoogleGenAI | null = null;
+// let aiClient: GoogleGenAI | null = null;
 // let elevenLabsClient: ElevenLabsClient | null = null;
 let supabaseClient: SupabaseClient | null = null;
 
-function getGoogleClient(): GoogleGenAI {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is not configured.");
-    }
-    aiClient = new GoogleGenAI({ apiKey });
+type GitHubModelsResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  error?: {
+    message?: string;
+  };
+};
+
+function getGitHubToken(): string {
+  const token =
+    process.env.GITHUB_TOKEN?.trim() ||
+    process.env.GITHUB_ACCESS_TOKEN?.trim();
+
+  if (!token) {
+    throw new Error(
+      "GITHUB_TOKEN (or GITHUB_ACCESS_TOKEN) is not configured. The token needs Models: read permission."
+    );
   }
 
-  return aiClient;
+  return token;
 }
+
+async function generateWithGitHubModels(options: {
+  messages: Array<{ role: "system" | "user"; content: string }>;
+  maxTokens: number;
+  responseFormat?: Record<string, unknown>;
+}): Promise<string> {
+  const model =
+    process.env.GITHUB_MODELS_MODEL?.trim() || DEFAULT_GITHUB_MODEL;
+  const usesReasoningParameters =
+    model.startsWith("openai/o") || model.startsWith("openai/gpt-5");
+
+  const response = await fetch(GITHUB_MODELS_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${getGitHubToken()}`,
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version":
+        process.env.GITHUB_API_VERSION?.trim() || "2022-11-28",
+    },
+    body: JSON.stringify({
+      model,
+      messages: options.messages,
+      ...(usesReasoningParameters
+        ? { max_completion_tokens: options.maxTokens }
+        : { max_tokens: options.maxTokens, temperature: 0.2 }),
+      ...(options.responseFormat
+        ? { response_format: options.responseFormat }
+        : {}),
+    }),
+  });
+
+  const rawBody = await response.text();
+  const payload = safeParseJSON<GitHubModelsResponse>(rawBody);
+
+  if (!response.ok) {
+    const error = new Error(
+      `GitHub Models request failed (${response.status}): ${
+        payload?.error?.message || rawBody || response.statusText
+      }`
+    ) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  const content = payload?.choices?.[0]?.message?.content?.trim();
+  if (!content) {
+    throw new Error("GitHub Models returned an empty response.");
+  }
+
+  return content;
+}
+
+/*
+ * Previous Gemini client initialization is kept disabled while GitHub Models
+ * is the active LLM provider.
+ *
+ * function getGoogleClient(): GoogleGenAI {
+ *   if (!aiClient) {
+ *     const apiKey = process.env.GEMINI_API_KEY;
+ *     if (!apiKey) {
+ *       throw new Error("GEMINI_API_KEY environment variable is not configured.");
+ *     }
+ *     aiClient = new GoogleGenAI({ apiKey });
+ *   }
+ *
+ *   return aiClient;
+ * }
+ */
 
 // function getElevenLabsClient(): ElevenLabsClient {
 //   if (!elevenLabsClient) {
@@ -182,32 +269,165 @@ export async function createPromptForUser(
   return { user, prompt };
 }
 
-export async function generateSpeech(text: string): Promise<{ data: string; mimeType: string }> {
-  const ai = getGoogleClient();
-  
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-preview-tts",
-    contents: [{ parts: [{ text: text }] }],
-    config: {
-      responseModalities: [Modality.AUDIO],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Kore' }, // Using a neutral voice
-        },
-      },
-    },
-  });
-
-  const inlineData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-  const base64Audio = inlineData?.data;
-  const mimeType = inlineData?.mimeType ?? "audio/wav";
-  
-  if (!base64Audio) {
-    throw new Error("Failed to generate audio from the API.");
+function splitTextForDeepgram(text: string, maxCharacters = 1_900): string[] {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  if (!normalized) {
+    return [];
   }
-  
-  return { data: base64Audio, mimeType };
+
+  const sentences =
+    normalized.match(/[^.!?]+(?:[.!?]+["')\]]*|$)/g) ?? [normalized];
+  const chunks: string[] = [];
+  let current = "";
+
+  const appendPiece = (piece: string) => {
+    const candidate = current ? `${current} ${piece}` : piece;
+    if (candidate.length <= maxCharacters) {
+      current = candidate;
+      return;
+    }
+
+    if (current) {
+      chunks.push(current);
+      current = "";
+    }
+
+    if (piece.length <= maxCharacters) {
+      current = piece;
+      return;
+    }
+
+    const words = piece.split(/\s+/);
+    for (const word of words) {
+      if (word.length > maxCharacters) {
+        if (current) {
+          chunks.push(current);
+          current = "";
+        }
+        for (let index = 0; index < word.length; index += maxCharacters) {
+          chunks.push(word.slice(index, index + maxCharacters));
+        }
+        continue;
+      }
+
+      const wordCandidate = current ? `${current} ${word}` : word;
+      if (wordCandidate.length > maxCharacters) {
+        chunks.push(current);
+        current = word;
+      } else {
+        current = wordCandidate;
+      }
+    }
+  };
+
+  for (const sentence of sentences) {
+    appendPiece(sentence.trim());
+  }
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks;
 }
+
+export async function generateSpeech(
+  text: string
+): Promise<{ data: Buffer; mimeType: string }> {
+  const apiKey = process.env.DEEPGRAM_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("DEEPGRAM_API_KEY environment variable is not configured.");
+  }
+
+  const voice =
+    process.env.DEEPGRAM_TTS_MODEL?.trim() || DEFAULT_DEEPGRAM_VOICE;
+  const query = new URLSearchParams({
+    model: voice,
+    encoding: "linear16",
+    container: "none",
+    sample_rate: "24000",
+  });
+  const chunks = splitTextForDeepgram(text);
+  if (chunks.length === 0) {
+    throw new Error("Cannot generate speech from empty text.");
+  }
+
+  console.log(
+    `[TTS] Splitting ${text.length} characters into ${chunks.length} Deepgram request(s)`
+  );
+
+  const pcmBuffers: Buffer[] = [];
+  for (const [index, chunk] of chunks.entries()) {
+    const response = await fetch(
+      `https://api.deepgram.com/v1/speak?${query.toString()}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: chunk }),
+      }
+    );
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(
+        `Deepgram TTS request ${index + 1}/${chunks.length} failed (${
+          response.status
+        }): ${detail || response.statusText}`
+      );
+    }
+
+    const pcmData = Buffer.from(await response.arrayBuffer());
+    if (pcmData.length === 0) {
+      throw new Error(
+        `Deepgram TTS returned empty audio for chunk ${index + 1}/${
+          chunks.length
+        }.`
+      );
+    }
+    pcmBuffers.push(pcmData);
+  }
+
+  return {
+    data: createWavFile(Buffer.concat(pcmBuffers), 24_000, 1, 16),
+    mimeType: "audio/wav",
+  };
+}
+
+/*
+ * Previous Gemini TTS implementation (disabled):
+ *
+ * export async function generateSpeech(
+ *   text: string
+ * ): Promise<{ data: string; mimeType: string }> {
+ *   const ai = getGoogleClient();
+ *
+ *   const response = await ai.models.generateContent({
+ *     model: "gemini-2.5-flash-preview-tts",
+ *     contents: [{ parts: [{ text: text }] }],
+ *     config: {
+ *       responseModalities: [Modality.AUDIO],
+ *       speechConfig: {
+ *         voiceConfig: {
+ *           prebuiltVoiceConfig: { voiceName: "Kore" },
+ *         },
+ *       },
+ *     },
+ *   });
+ *
+ *   const inlineData =
+ *     response.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+ *   const base64Audio = inlineData?.data;
+ *   const mimeType = inlineData?.mimeType ?? "audio/wav";
+ *
+ *   if (!base64Audio) {
+ *     throw new Error("Failed to generate audio from the API.");
+ *   }
+ *
+ *   return { data: base64Audio, mimeType };
+ * }
+ */
 
 // Language mapping for better prompts
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -231,7 +451,6 @@ export async function translateNarration(
     return narration;
   }
 
-  const ai = getGoogleClient();
   const languageName = LANGUAGE_NAMES[targetLanguage] || targetLanguage;
 
   const translationPrompt = `Translate the following educational narration to ${languageName}.
@@ -248,14 +467,25 @@ ${narration}
 
 Provide ONLY the translated narration in ${languageName}, without any additional text or explanations.`;
 
-  const response = await retryWithBackoff(() =>
-    ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: translationPrompt,
+  /*
+   * Previous Gemini translation implementation (disabled):
+   *
+   * const ai = getGoogleClient();
+   * const response = await retryWithBackoff(() =>
+   *   ai.models.generateContent({
+   *     model: "gemini-2.0-flash",
+   *     contents: translationPrompt,
+   *   })
+   * );
+   * const translatedText = response.text?.trim();
+   */
+
+  const translatedText = await retryWithBackoff(() =>
+    generateWithGitHubModels({
+      messages: [{ role: "user", content: translationPrompt }],
+      maxTokens: 16_000,
     })
   );
-
-  const translatedText = response.text?.trim();
 
   if (!translatedText) {
     throw new Error("Failed to translate narration");
@@ -281,21 +511,44 @@ export async function requirePromptByPublicId(promptId: string): Promise<PromptM
 }
 
 export async function generateScriptForPrompt(prompt: PromptModel): Promise<ScriptGenerationResult> {
-  const ai = getGoogleClient();
+  /*
+   * Previous Gemini script generation implementation (disabled):
+   *
+   * const ai = getGoogleClient();
+   * const response = await retryWithBackoff(() =>
+   *   ai.models.generateContent({
+   *     model: "gemini-3-flash-preview",
+   *     contents: `Generate a video script for the topic: "${prompt.prompt}"`,
+   *     config: {
+   *       systemInstruction,
+   *       responseMimeType: "application/json",
+   *       responseSchema: scriptGenerationSchema,
+   *     },
+   *   })
+   * );
+   * const rawText = response.text?.trim();
+   */
 
-  const response = await retryWithBackoff(() =>
-    ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Generate a video script for the topic: "${prompt.prompt}"`,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: scriptGenerationSchema,
+  const rawText = await retryWithBackoff(() =>
+    generateWithGitHubModels({
+      messages: [
+        { role: "system", content: systemInstruction },
+        {
+          role: "user",
+          content: `Generate a video script for the topic: "${prompt.prompt}"`,
+        },
+      ],
+      maxTokens: 32_000,
+      responseFormat: {
+        type: "json_schema",
+        json_schema: {
+          name: "educational_video_script",
+          strict: true,
+          schema: scriptGenerationSchema,
+        },
       },
     })
   );
-
-  const rawText = response.text?.trim();
 
   if (!rawText) {
     throw new Error("Empty response from AI");
@@ -319,7 +572,7 @@ export async function generateScriptForPrompt(prompt: PromptModel): Promise<Scri
     try {
       parsed = JSON.parse(fixedText) as AIScriptResponse;
       console.log("Successfully parsed after removing markdown blocks");
-    } catch (secondError) {
+    } catch {
       throw new Error(
         `Failed to parse AI response as JSON: ${(error as Error).message}\n` +
         `Position: ${rawText.substring(Math.max(0, 27082 - 100), Math.min(rawText.length, 27082 + 100))}`
@@ -385,7 +638,7 @@ export async function generateAudioForPrompt(
     throw new Error("Script not found for prompt");
   }
 
-  let narration = options.narration ?? scriptRecord.narration;
+  const narration = options.narration ?? scriptRecord.narration;
 
   if (!narration) {
     throw new Error("Narration not available for audio generation");
@@ -394,58 +647,54 @@ export async function generateAudioForPrompt(
   // Get the language from options or from the prompt record
   const language = options.language ?? prompt.language ?? "english";
 
-  // Translate narration if not in English
-  if (language !== "english") {
-    console.log(`[TTS] Translating narration from English to ${language}`);
-    narration = await translateNarration(narration, language);
-    console.log(`[TTS] Translation completed`);
-  }
-
   let audioUrl: string;
   let usedTestAudio = false;
 
   if (ENABLE_TTS) {
+    if (language !== "english") {
+      throw new Error(
+        `Deepgram Aura TTS does not currently support the selected "${language}" narration language.`
+      );
+    }
+
     // Comment out Eleven Labs implementation
     // const elevenlabs = getElevenLabsClient();
     const supabase = getSupabaseClient();
 
-    // Use Gemini TTS instead
-    const { data: base64Audio, mimeType } = await generateSpeech(narration);
-    
+    /*
+     * Previous Gemini TTS/audio preparation implementation (disabled):
+     *
+     * const { data: base64Audio, mimeType } =
+     *   await generateSpeech(narration);
+     * let audioBuffer: Buffer = Buffer.from(base64Audio, "base64");
+     *
+     * const hasWavHeader =
+     *   audioBuffer.length >= 4 &&
+     *   audioBuffer.toString("ascii", 0, 4) === "RIFF";
+     *
+     * if (!hasWavHeader) {
+     *   // Gemini TTS typically outputs 24kHz, mono, 16-bit PCM.
+     *   audioBuffer = createWavFile(audioBuffer, 24000, 1, 16);
+     * }
+     */
+
+    // Gemini TTS is paused; Deepgram Aura-2 Thalia is the active female voice.
+    const { data: audioBuffer, mimeType } = await generateSpeech(narration);
+
     console.log(`[TTS] Received audio with mimeType: ${mimeType}`);
-    
-    // Convert base64 to buffer
-    let audioBuffer: Buffer = Buffer.from(base64Audio, 'base64');
-    
-    // Check if the audio data has a WAV header (starts with "RIFF")
-    const hasWavHeader = audioBuffer.length >= 4 && 
-                        audioBuffer.toString('ascii', 0, 4) === 'RIFF';
-    
-    if (!hasWavHeader) {
-      console.log('[TTS] No WAV header detected, adding WAV header to PCM data');
-      // If no header, assume it's raw PCM and add WAV header
-      // Gemini TTS typically outputs 24kHz, mono, 16-bit PCM
-      audioBuffer = createWavFile(audioBuffer, 24000, 1, 16);
-    } else {
-      console.log('[TTS] WAV header detected in audio data');
-    }
-    
-    // Gemini TTS returns audio/wav format, so use .wav extension
-    // Determine file extension based on mime type
-    let fileExtension = 'wav';  // Default to wav for Gemini TTS
+
+    let fileExtension = "wav";
     let contentType = mimeType;
-    
-    if (mimeType.includes('mpeg') || mimeType.includes('mp3')) {
-      fileExtension = 'mp3';
-    } else if (mimeType.includes('wav') || mimeType.includes('wave')) {
-      fileExtension = 'wav';
-      contentType = 'audio/wav';
+
+    if (mimeType.includes("mpeg") || mimeType.includes("mp3")) {
+      fileExtension = "mp3";
+    } else if (mimeType.includes("wav") || mimeType.includes("wave")) {
+      contentType = "audio/wav";
     } else {
-      // For unknown types, default to wav
       console.warn(`[TTS] Unknown mimeType: ${mimeType}, defaulting to wav`);
-      contentType = 'audio/wav';
+      contentType = "audio/wav";
     }
-    
+
     const audioFileName = `${scriptRecord.scriptId}.${fileExtension}`;
     console.log(`[TTS] Uploading audio as: ${audioFileName} with contentType: ${contentType}, size: ${audioBuffer.length} bytes`);
 

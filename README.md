@@ -1,12 +1,11 @@
 # ByteLearn - AI-Powered Visual Learning Platform
 
-Transform your learning prompts into stunning visual explanations with AI-generated Manim animations and synchronized narration in 9 Indian languages.
+Transform your learning prompts into visual explanations with AI-generated Manim animations and synchronized narration.
 
 ## 🌟 Features
 
-- **AI-Generated Animations**: Convert text prompts into educational Manim videos using Google Gemini AI
-- **Multi-Language Support**: Get narrations in 9 Indian languages (English, Hindi, Tamil, Telugu, Malayalam, Kannada, Bengali, Gujarati, Marathi)
-- **Text-to-Speech**: Professional voice narration powered by Google Gemini TTS
+- **AI-Generated Animations**: Convert text prompts into educational Manim videos using GitHub Models
+- **Text-to-Speech**: Female English voice narration powered by Deepgram Aura-2
 - **User Authentication**: Secure authentication using Clerk
 - **Dashboard**: Track your learning progress and manage generated content
 - **Background Processing**: Asynchronous video generation with status tracking
@@ -24,8 +23,8 @@ Transform your learning prompts into stunning visual explanations with AI-genera
 
 ### Backend
 - **Python Backend**: FastAPI for Manim video rendering (see `byte_learn_backend/`)
-- **AI**: Google Gemini AI for script generation
-- **TTS**: Google TTS for voice synthesis
+- **AI**: GitHub Models for script generation and translation
+- **TTS**: Deepgram Aura-2 for English voice synthesis
 - **Storage**: Supabase for video and audio storage
 - **Database**: Supabase (PostgreSQL)
 
@@ -59,6 +58,20 @@ yarn install
 
 Create a `.env.local` file in the root directory:
 
+```env
+# GitHub PAT with Models: read permission
+GITHUB_TOKEN=
+# Optional; defaults to openai/gpt-4.1
+GITHUB_MODELS_MODEL=openai/gpt-4.1
+
+DEEPGRAM_API_KEY=
+# Optional female English voice
+DEEPGRAM_TTS_MODEL=aura-2-thalia-en
+ENABLE_TTS=true
+```
+
+Deepgram Aura does not currently support the Indian-language narration options
+shown by the existing UI. Keep English selected when `ENABLE_TTS=true`.
 
 ### 4. Database Setup
 
@@ -164,8 +177,8 @@ pnpm lint          # Run ESLint
 
 ### 1. Content Generation Flow
 1. User submits a learning prompt with language preference
-2. Google Gemini AI generates a Manim script with explanations
-3. ElevenLabs converts narration to speech in the selected language
+2. GitHub Models generates a Manim script with explanations
+3. Deepgram Aura-2 converts English narration to speech
 4. Python backend renders the Manim animation
 5. Video and audio are muxed together
 6. Final video is stored in Supabase
@@ -177,9 +190,9 @@ Videos are generated asynchronously with status tracking:
 - `COMPLETED`: Ready to view
 - `FAILED`: Error occurred
 
-### 3. Multi-Language Support
-Supports 9 Indian languages for narration:
-- English, Hindi, Tamil, Telugu, Malayalam, Kannada, Bengali, Gujarati, Marathi
+### 3. Narration Language
+Deepgram TTS is currently enabled for English narration. Other language choices
+return an explicit unsupported-language error instead of generating inaccurate audio.
 
 ## 🚀 Deployment
 
@@ -208,8 +221,8 @@ Update the `BACKEND_URL` and `PYTHON_BACKEND_URL` environment variables accordin
 - [Manim Community](https://www.manim.community/)
 - [Clerk Authentication](https://clerk.com/docs)
 - [Prisma Documentation](https://www.prisma.io/docs)
-- [Google Gemini AI](https://ai.google.dev/)
-- [ElevenLabs API](https://elevenlabs.io/docs)
+- [GitHub Models](https://docs.github.com/en/github-models)
+- [Deepgram Text-to-Speech](https://developers.deepgram.com/docs/text-to-speech)
 
 ## 🤝 Contributing
 
