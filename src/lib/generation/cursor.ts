@@ -1,6 +1,11 @@
+import { mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import {
   Agent,
   CursorAgentError,
+  JsonlLocalAgentStore,
   type AgentOptions,
   type SDKAgent,
 } from "@cursor/sdk";
@@ -8,11 +13,61 @@ import {
 const DEFAULT_MODEL = "composer-2.5";
 const DEFAULT_FALLBACK_MODEL = "auto";
 
+let sharedServerlessStore: JsonlLocalAgentStore | null = null;
+
+function isServerlessRuntime(): boolean {
+  return Boolean(
+    process.env.VERCEL ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.CURSOR_SDK_FORCE_TMP === "true"
+  );
+}
+
+/**
+ * Vercel/Lambda only allow writes under /tmp. The SDK's default local store
+ * lives under ~/.cursor/projects/<cwd>/sdk-agent-store and fails with ENOENT
+ * when cwd is the read-only /var/task bundle.
+ */
+function resolveCursorWorkspace(): string {
+  const configured = process.env.CURSOR_SDK_CWD?.trim();
+  if (configured) {
+    mkdirSync(configured, { recursive: true });
+    return configured;
+  }
+
+  if (isServerlessRuntime()) {
+    const workspace = path.join(tmpdir(), "bytelearn-cursor");
+    mkdirSync(workspace, { recursive: true });
+    return workspace;
+  }
+
+  return process.cwd();
+}
+
+function resolveLocalStore(workspace: string): JsonlLocalAgentStore | undefined {
+  const configuredStoreDir = process.env.CURSOR_SDK_STORE_DIR?.trim();
+  if (!isServerlessRuntime() && !configuredStoreDir) {
+    return undefined;
+  }
+
+  const storeDir =
+    configuredStoreDir || path.join(workspace, "sdk-agent-store");
+  mkdirSync(storeDir, { recursive: true });
+
+  if (!sharedServerlessStore) {
+    sharedServerlessStore = new JsonlLocalAgentStore(storeDir);
+  }
+  return sharedServerlessStore;
+}
+
 function cursorOptions(name: string, modelId?: string): AgentOptions {
   const apiKey = process.env.CURSOR_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("CURSOR_API_KEY is not configured.");
   }
+
+  const cwd = resolveCursorWorkspace();
+  const store = resolveLocalStore(cwd);
 
   return {
     apiKey,
@@ -21,9 +76,10 @@ function cursorOptions(name: string, modelId?: string): AgentOptions {
     },
     name,
     local: {
-      cwd: process.cwd(),
+      cwd,
       settingSources: [],
       enableAgentRetries: true,
+      ...(store ? { store } : {}),
     },
   };
 }
@@ -33,7 +89,7 @@ function shouldRetryCursorRun(error: unknown): boolean {
     return error.isRetryable;
   }
   const message = error instanceof Error ? error.message : String(error);
-  return /looping detected|repeating response|rate.?limit|temporar|timed? ?out|transport/i.test(
+  return /looping detected|repeating response|rate.?limit|temporar|timed? ?out|transport|ENOENT|EACCES|EROFS/i.test(
     message
   );
 }
