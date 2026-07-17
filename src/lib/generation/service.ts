@@ -15,6 +15,7 @@ import { prisma } from "@/lib/prisma";
 
 import {
   promptCursor,
+  resolveCursorSceneConcurrency,
   resumeCursorConversation,
   startCursorConversation,
   stripMarkdownFence,
@@ -693,7 +694,7 @@ export async function generateScriptForPrompt(
 
   const scenes = await mapWithConcurrency(
     timedAudio.scenes,
-    Number(process.env.CURSOR_SCENE_CONCURRENCY || 3),
+    resolveCursorSceneConcurrency(),
     async ({ scene, audioUrl, audioDuration }, index): Promise<GeneratedScene> => {
       const sceneName = `Scene${index + 1}`;
       const generated = await startCursorConversation(
