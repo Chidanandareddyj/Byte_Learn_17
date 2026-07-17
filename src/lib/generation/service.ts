@@ -1,4 +1,4 @@
-// Gemini integration is intentionally paused. LLM calls now use GitHub Models.
+// Gemini and GitHub Models integrations are retained below for rollback.
 // import { GoogleGenAI, Modality } from "@google/genai";
 // import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -13,21 +13,25 @@ import type {
 
 import { prisma } from "@/lib/prisma";
 
-import { scriptGenerationSchema, systemInstruction } from "./constants";
-import { createWavFile, generateUniqueId, retryWithBackoff } from "./utils";
-
-// Type for AI response
-type AIScriptResponse = {
-  title?: string;
-  explanation?: string;
-  scenes?: unknown[];
-};
+import {
+  promptCursor,
+  resumeCursorConversation,
+  startCursorConversation,
+  stripMarkdownFence,
+} from "./cursor";
+import {
+  buildPlannerPrompt,
+  buildSceneCoderPrompt,
+  buildTextViolationFixPrompt,
+  findNarrationTextViolations,
+  type GeneratedScene,
+  type Storyboard,
+  type StoryboardScene,
+} from "./prompts";
+import { createWavFile, generateUniqueId } from "./utils";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 const ENABLE_TTS = process.env.ENABLE_TTS === "true";
-const GITHUB_MODELS_ENDPOINT =
-  "https://models.github.ai/inference/chat/completions";
-const DEFAULT_GITHUB_MODEL = "openai/o4-mini";
 const DEFAULT_DEEPGRAM_VOICE = "aura-2-thalia-en";
 const DEFAULT_TEST_AUDIO_URL =
   process.env.TEST_AUDIO_URL ??
@@ -37,6 +41,9 @@ const DEFAULT_TEST_AUDIO_URL =
 // let elevenLabsClient: ElevenLabsClient | null = null;
 let supabaseClient: SupabaseClient | null = null;
 
+/*
+ * Previous GitHub Models integration (disabled in favor of Cursor SDK).
+ *
 type GitHubModelsResponse = {
   choices?: Array<{
     message?: {
@@ -113,6 +120,7 @@ async function generateWithGitHubModels(options: {
 
   return content;
 }
+*/
 
 /*
  * Previous Gemini client initialization is kept disabled while GitHub Models
@@ -175,6 +183,14 @@ function resolveWebhookUrl(): string {
   return `${normalizedBase}/api/webhooks/video-generation`;
 }
 
+function resolveRepairUrl(): string {
+  const base = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
+  if (!base?.trim()) {
+    throw new Error("APP_URL (or NEXT_PUBLIC_APP_URL) is required for scene repair callbacks.");
+  }
+  return `${base.trim().replace(/\/$/, "")}/api/internal/repair-scene`;
+}
+
 function resolveMuxBucket(): string {
   return process.env.MUX_BUCKET_NAME?.trim() || "muxvideos";
 }
@@ -213,9 +229,10 @@ export type ScriptGenerationResult = {
   scriptRecord: ScriptModel;
   title: string;
   explanation: string;
-  scenes: unknown[];
+  scenes: GeneratedScene[];
   fullManimScript: string;
   fullNarration: string;
+  audioResult: AudioGenerationResult;
 };
 
 export type AudioGenerationResult = {
@@ -480,11 +497,18 @@ Provide ONLY the translated narration in ${languageName}, without any additional
    * const translatedText = response.text?.trim();
    */
 
-  const translatedText = await retryWithBackoff(() =>
-    generateWithGitHubModels({
-      messages: [{ role: "user", content: translationPrompt }],
-      maxTokens: 16_000,
-    })
+  /*
+   * Previous GitHub Models translation call (disabled):
+   * const translatedText = await retryWithBackoff(() =>
+   *   generateWithGitHubModels({
+   *     messages: [{ role: "user", content: translationPrompt }],
+   *     maxTokens: 16_000,
+   *   })
+   * );
+   */
+  const translatedText = await promptCursor(
+    translationPrompt,
+    `ByteLearn ${languageName} translation`
   );
 
   if (!translatedText) {
@@ -510,110 +534,256 @@ export async function requirePromptByPublicId(promptId: string): Promise<PromptM
   return prompt;
 }
 
-export async function generateScriptForPrompt(prompt: PromptModel): Promise<ScriptGenerationResult> {
-  /*
-   * Previous Gemini script generation implementation (disabled):
-   *
-   * const ai = getGoogleClient();
-   * const response = await retryWithBackoff(() =>
-   *   ai.models.generateContent({
-   *     model: "gemini-3-flash-preview",
-   *     contents: `Generate a video script for the topic: "${prompt.prompt}"`,
-   *     config: {
-   *       systemInstruction,
-   *       responseMimeType: "application/json",
-   *       responseSchema: scriptGenerationSchema,
-   *     },
-   *   })
-   * );
-   * const rawText = response.text?.trim();
-   */
+async function mapWithConcurrency<T, R>(
+  values: T[],
+  concurrency: number,
+  mapper: (value: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(values.length);
+  let nextIndex = 0;
 
-  const rawText = await retryWithBackoff(() =>
-    generateWithGitHubModels({
-      messages: [
-        { role: "system", content: systemInstruction },
-        {
-          role: "user",
-          content: `Generate a video script for the topic: "${prompt.prompt}"`,
-        },
-      ],
-      maxTokens: 32_000,
-      responseFormat: {
-        type: "json_schema",
-        json_schema: {
-          name: "educational_video_script",
-          strict: true,
-          schema: scriptGenerationSchema,
-        },
-      },
-    })
-  );
-
-  if (!rawText) {
-    throw new Error("Empty response from AI");
-  }
-
-  let parsed: AIScriptResponse;
-
-  try {
-    parsed = JSON.parse(rawText) as AIScriptResponse;
-  } catch (error) {
-    console.error("Raw AI response (first 500 chars):", rawText.substring(0, 500));
-    console.error("Raw AI response (around error position):", rawText.substring(27000, 27200));
-    
-    // Try to fix common JSON issues
-    let fixedText = rawText;
-    
-    // Remove any markdown code blocks if present
-    fixedText = fixedText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    
-    // Try parsing again with fixed text
-    try {
-      parsed = JSON.parse(fixedText) as AIScriptResponse;
-      console.log("Successfully parsed after removing markdown blocks");
-    } catch {
-      throw new Error(
-        `Failed to parse AI response as JSON: ${(error as Error).message}\n` +
-        `Position: ${rawText.substring(Math.max(0, 27082 - 100), Math.min(rawText.length, 27082 + 100))}`
-      );
+  async function worker() {
+    while (nextIndex < values.length) {
+      const index = nextIndex++;
+      results[index] = await mapper(values[index], index);
     }
   }
 
-  const scenes: unknown[] = Array.isArray(parsed.scenes) ? parsed.scenes : [];
+  await Promise.all(
+    Array.from(
+      { length: Math.min(Math.max(1, concurrency), values.length) },
+      () => worker()
+    )
+  );
+  return results;
+}
 
-  const fullManimScript = scenes
-    .map((scene) => {
-      const manimScript = (scene as { manimScript?: string }).manimScript ?? "";
-      return manimScript;
-    })
-    .join("\n\n");
+function parseStoryboard(rawText: string): Storyboard {
+  let value: unknown;
+  try {
+    value = JSON.parse(stripMarkdownFence(rawText));
+  } catch (error) {
+    throw new Error(`Cursor planner returned invalid JSON: ${(error as Error).message}`);
+  }
 
-  const fullNarration = scenes
-    .map((scene) => {
-      const narration = (scene as { narration?: string }).narration ?? "";
-      return narration;
-    })
-    .join(" ");
+  const candidate = value as Partial<Storyboard>;
+  const rawScenes = Array.isArray(candidate.scenes) ? candidate.scenes : [];
+  if (rawScenes.length < 4) {
+    throw new Error("Cursor planner returned fewer than four usable scenes.");
+  }
 
-  const scriptRecord = await prisma.script.create({
-    data: {
-      scriptId: generateUniqueId(),
-      script: fullManimScript,
-      explanation: parsed.explanation ?? "",
-      narration: fullNarration,
-      promptId: prompt.id,
-    },
+  const scenes: StoryboardScene[] = rawScenes.slice(0, 10).map((scene, index) => {
+    const item = scene as Partial<StoryboardScene>;
+    if (!item.narration?.trim() || !item.visualSpec?.trim()) {
+      throw new Error(`Storyboard scene ${index + 1} is missing narration or visual direction.`);
+    }
+    return {
+      sceneNumber: index + 1,
+      purpose: item.purpose?.trim() || `Learning beat ${index + 1}`,
+      visualSpec: item.visualSpec.trim(),
+      narration: item.narration.trim(),
+    };
   });
 
-  console.log(`[SCRIPT] Generated script with ${scenes.length} scenes`);
+  return {
+    title: candidate.title?.trim() || "ByteLearn visual lesson",
+    explanation: candidate.explanation?.trim() || "",
+    styleContract: {
+      background: candidate.styleContract?.background || "#0E1116",
+      primary: candidate.styleContract?.primary || "#58C4DD",
+      secondary: candidate.styleContract?.secondary || "#83C167",
+      accent: candidate.styleContract?.accent || "#FFFF00",
+      visualMotif:
+        candidate.styleContract?.visualMotif ||
+        "A single visual model that gains structure scene by scene.",
+    },
+    scenes,
+  };
+}
+
+async function uploadAudio(
+  fileName: string,
+  buffer: Buffer,
+  contentType = "audio/wav"
+): Promise<string> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.storage.from("audio").upload(fileName, buffer, {
+    contentType,
+    upsert: true,
+  });
+  if (error) {
+    throw new Error(`Failed to upload ${fileName}: ${error.message}`);
+  }
+  return supabase.storage.from("audio").getPublicUrl(fileName).data.publicUrl;
+}
+
+type TimedSceneAudio = {
+  scene: StoryboardScene;
+  audioUrl: string;
+  audioDuration: number;
+  pcm: Buffer | null;
+};
+
+async function generateTimedSceneAudio(
+  storyboard: Storyboard,
+  scriptId: string,
+  language: string
+): Promise<{ scenes: TimedSceneAudio[]; aggregateUrl: string; usedTestAudio: boolean }> {
+  if (language !== "english") {
+    throw new Error(
+      `Deepgram Aura TTS does not currently support the selected "${language}" narration language.`
+    );
+  }
+
+  if (!ENABLE_TTS) {
+    return {
+      scenes: storyboard.scenes.map((scene) => ({
+        scene,
+        audioUrl: DEFAULT_TEST_AUDIO_URL,
+        audioDuration: Math.max(8, scene.narration.split(/\s+/).length / 2.5),
+        pcm: null,
+      })),
+      aggregateUrl: DEFAULT_TEST_AUDIO_URL,
+      usedTestAudio: true,
+    };
+  }
+
+  const scenes = await mapWithConcurrency(
+    storyboard.scenes,
+    Number(process.env.TTS_CONCURRENCY || 2),
+    async (scene) => {
+      const { data } = await generateSpeech(scene.narration);
+      const pcm = data.subarray(44);
+      const audioDuration = pcm.length / (24_000 * 2);
+      const audioUrl = await uploadAudio(
+        `${scriptId}/scene-${scene.sceneNumber}.wav`,
+        data
+      );
+      return { scene, audioUrl, audioDuration, pcm };
+    }
+  );
+
+  const aggregateWav = createWavFile(
+    Buffer.concat(scenes.map((item) => item.pcm as Buffer)),
+    24_000,
+    1,
+    16
+  );
+  const aggregateUrl = await uploadAudio(`${scriptId}/complete.wav`, aggregateWav);
+  return { scenes, aggregateUrl, usedTestAudio: false };
+}
+
+export async function generateScriptForPrompt(
+  prompt: PromptModel
+): Promise<ScriptGenerationResult> {
+  /*
+   * Previous single-call GitHub Models implementation is retained in git history
+   * and in constants.ts as a rollback reference. The active pipeline deliberately
+   * separates direction, measured speech, and per-scene code generation.
+   */
+  const storyboard = parseStoryboard(
+    await promptCursor(
+      buildPlannerPrompt(prompt.prompt),
+      `ByteLearn director: ${prompt.prompt.slice(0, 48)}`
+    )
+  );
+  const scriptId = generateUniqueId();
+  const language = prompt.language || "english";
+  const timedAudio = await generateTimedSceneAudio(storyboard, scriptId, language);
+
+  const scenes = await mapWithConcurrency(
+    timedAudio.scenes,
+    Number(process.env.CURSOR_SCENE_CONCURRENCY || 3),
+    async ({ scene, audioUrl, audioDuration }, index): Promise<GeneratedScene> => {
+      const sceneName = `Scene${index + 1}`;
+      const generated = await startCursorConversation(
+        buildSceneCoderPrompt({
+          storyboard,
+          scene,
+          sceneName,
+          audioDuration,
+        }),
+        `ByteLearn coder ${sceneName}`
+      );
+      let manimScript = stripMarkdownFence(generated.text);
+      if (!manimScript.includes(`class ${sceneName}`)) {
+        throw new Error(`Cursor coder did not return the required ${sceneName} class.`);
+      }
+
+      // Enforce the audio-only narration rule: if the scene renders prose on
+      // screen, send it back to the same coder agent to replace text with visuals.
+      for (let rewrite = 0; rewrite < 2; rewrite++) {
+        const violations = findNarrationTextViolations(manimScript);
+        if (violations.length === 0) {
+          break;
+        }
+        console.warn(
+          `[SCRIPT] ${sceneName} rendered prose on screen (${violations.length} violation(s)); requesting rewrite ${rewrite + 1}/2`
+        );
+        const rewritten = stripMarkdownFence(
+          await resumeCursorConversation(
+            generated.agentId,
+            buildTextViolationFixPrompt({ sceneName, violations })
+          )
+        );
+        if (rewritten.includes(`class ${sceneName}`)) {
+          manimScript = rewritten;
+        }
+      }
+      const remainingViolations = findNarrationTextViolations(manimScript);
+      if (remainingViolations.length > 0) {
+        console.warn(
+          `[SCRIPT] ${sceneName} still contains on-screen prose after rewrites; proceeding with warning`,
+          remainingViolations
+        );
+      }
+
+      return {
+        ...scene,
+        sceneName,
+        manimScript,
+        audioUrl,
+        audioDuration,
+        coderAgentId: generated.agentId,
+      };
+    }
+  );
+
+  const fullManimScript = scenes.map((scene) => scene.manimScript).join("\n\n");
+  const fullNarration = scenes.map((scene) => scene.narration).join(" ");
+  const [scriptRecord, audioRecord] = await prisma.$transaction([
+    prisma.script.create({
+      data: {
+        scriptId,
+        script: fullManimScript,
+        explanation: storyboard.explanation,
+        narration: fullNarration,
+        promptId: prompt.id,
+      },
+    }),
+    prisma.audio.create({
+      data: {
+        audioUrl: timedAudio.aggregateUrl,
+        promptId: prompt.id,
+      },
+    }),
+  ]);
+
+  const audioResult: AudioGenerationResult = {
+    audioRecord,
+    audioUrl: timedAudio.aggregateUrl,
+    usedTestAudio: timedAudio.usedTestAudio,
+  };
+
+  console.log(`[SCRIPT] Planned and generated ${scenes.length} rich scenes`);
   return {
     scriptRecord,
-    title: parsed.title ?? "",
-    explanation: parsed.explanation ?? "",
+    title: storyboard.title,
+    explanation: storyboard.explanation,
     scenes,
     fullManimScript,
     fullNarration,
+    audioResult,
   };
 }
 
@@ -773,9 +943,16 @@ export async function enqueueVideoProcessingJob(
   const audioSpeed = options.audioSpeed ?? resolveAudioSpeed();
 
   const payload = {
-    script_code: script.fullManimScript,
-    scene_name: "auto",
-    quality: options.quality ?? "low",
+    scenes: script.scenes.map((scene) => ({
+      scene_name: scene.sceneName,
+      script_code: scene.manimScript,
+      audio_url: scene.audioUrl,
+      audio_duration: scene.audioDuration,
+      coder_agent_id: scene.coderAgentId,
+      narration: scene.narration,
+      purpose: scene.purpose,
+    })),
+    quality: options.quality ?? "medium",
     prompt_id: prompt.promptId,
     prompt_record_id: prompt.id,
     script_id: script.scriptRecord.scriptId,
@@ -788,10 +965,12 @@ export async function enqueueVideoProcessingJob(
     language: options.language,
     callback_url: callbackUrl,
     callback_secret: callbackSecret,
+    repair_url: resolveRepairUrl(),
+    max_repair_attempts: 3,
   };
 
   try {
-    const response = await fetch(`${BACKEND_URL}/render-and-upload-async`, {
+    const response = await fetch(`${BACKEND_URL}/render-scenes-async`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -1050,11 +1229,7 @@ export async function runGenerationWorkflow(args: {
   const { prompt } = await createPromptForUser(args.promptText, language, args.clerkId);
 
   const scriptResult = await generateScriptForPrompt(prompt);
-  const audioResult = await generateAudioForPrompt(prompt, {
-    narration: scriptResult.fullNarration,
-    scriptRecord: scriptResult.scriptRecord,
-    language: language,
-  });
+  const audioResult = scriptResult.audioResult;
   const job = await enqueueVideoProcessingJob({
     prompt,
     script: scriptResult,

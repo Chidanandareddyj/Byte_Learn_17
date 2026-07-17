@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/generate',
+  // Service-to-service endpoint; it authenticates with VIDEO_WEBHOOK_SECRET.
+  '/api/internal/repair-scene',
   '/api/webhooks/video-generation',
 ])
 

@@ -1,0 +1,3 @@
+# This file is used internally by FFMPEG.
+file 'file:C:/Users/jlcre/Documents/Byte_Learn/Byte_Learn_17/media/videos/test_scene6_lag/480p15/partial_movie_files/Scene6/2989533083_1926858448_223132457.mp4'
+file 'file:C:/Users/jlcre/Documents/Byte_Learn/Byte_Learn_17/media/videos/test_scene6_lag/480p15/partial_movie_files/Scene6/3514583141_82396707_959506197.mp4'

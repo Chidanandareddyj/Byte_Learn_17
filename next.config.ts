@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   
   // Fix workspace root warning
   outputFileTracingRoot: path.join(__dirname),
+  // The Cursor SDK ships its own local executor and dynamic runtime assets.
+  // Keep it as a Node dependency instead of asking webpack to bundle it.
+  serverExternalPackages: ["@cursor/sdk"],
 };
 
 export default nextConfig;

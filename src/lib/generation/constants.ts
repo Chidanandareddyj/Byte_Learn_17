@@ -46,6 +46,10 @@
  * };
  */
 
+/*
+ * Legacy single-call GitHub Models schema and prompt.
+ * Kept commented for rollback; the active planner/coder prompts live in prompts.ts.
+ *
 export const scriptGenerationSchema = {
   type: "object",
   additionalProperties: false,
@@ -153,3 +157,4 @@ Unicode math symbols: ², ³, √, ∑, ∫, ∂, ∞, π, θ, α, β, γ, δ, �
 NARRATION: Direct speech, no "welcome/today/let's explore".
 
 Generate 15-20 scenes for 4-5 min total. Respond with valid JSON.`;
+*/
