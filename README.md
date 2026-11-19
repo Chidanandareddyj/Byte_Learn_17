@@ -1,244 +1,121 @@
-# ByteLearn - AI-Powered Visual Learning Platform
+# ByteLearn
 
-Transform your learning prompts into visual explanations with AI-generated Manim animations and synchronized narration.
+AI-powered visual lessons: a prompt becomes a Manim video with narration.
 
-## 🌟 Features
+This package is the **Vercel app** (Next.js 15). Slow generation runs on EC2. See [`Byte_Learn_17_backend/README.md`](../Byte_Learn_17_backend/README.md).
 
-- **AI-Generated Animations**: Convert text prompts into educational Manim videos using GitHub Models
-- **Text-to-Speech**: Female English voice narration powered by Deepgram Aura-2
-- **User Authentication**: Secure authentication using Clerk
-- **Dashboard**: Track your learning progress and manage generated content
-- **Background Processing**: Asynchronous video generation with status tracking
-- **Modern UI**: Beautiful, responsive interface with dark mode support
+## Architecture
 
-## 🛠️ Tech Stack
-
-### Frontend
-- **Framework**: Next.js 15.5.6 (React 19.1.0)
-- **Styling**: Tailwind CSS with custom components
-- **UI Components**: Radix UI, Framer Motion, Lucide Icons
-- **Authentication**: Clerk
-- **Database ORM**: Prisma
-- **State Management**: TanStack Query
-
-### Backend
-- **Python Backend**: FastAPI for Manim video rendering (see `byte_learn_backend/`)
-- **AI**: GitHub Models for script generation and translation
-- **TTS**: Deepgram Aura-2 for English voice synthesis
-- **Storage**: Supabase for video and audio storage
-- **Database**: Supabase (PostgreSQL)
-
-## 📋 Prerequisites
-
-- Node.js 20+
-- pnpm (or npm/yarn)
-- Python 3.9+ (for backend)
-- Manim installed (for backend video rendering)
-
-## 🚀 Getting Started
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/Chidanandareddyj/ByteLearnStudy.git
-cd ByteLearnStudy/byte_learn_17
+```
+Browser  -->  Vercel (Next.js)
+                 |  writes Prompt + Video + Mux (QUEUED)
+                 |  polls GET /api/videos until COMPLETED or FAILED
+                 v
+              Postgres
+                 ^
+                 |  poll / claim / update stage + status + URL
+              EC2 worker (Node 22)
+                 |
+                 |  HTTP on the Docker network only
+              EC2 renderer (Python FastAPI + Manim)
+                 |
+                 v
+              Supabase storage
 ```
 
-### 2. Install Dependencies
+- **Vercel** is UI, Clerk auth, and short database writes. Hobby kills requests after 300s, so it never runs Cursor, TTS, or Manim, and it never calls EC2.
+- **EC2** claims the oldest `Mux` row with `status=QUEUED`, updates `Mux.stage` as it plans / narrates / codes / checks / renders, then writes the public URL to `Mux.finalvideoUrl` and `Video.videoUrl`.
+- The database is the only link. Vercel does not call EC2. EC2 does not call Vercel.
+
+Prisma migrations live in this package (`prisma/`). The worker copies the schema and runs `prisma generate` only.
+
+## Tech stack
+
+- Next.js 15, React 19, Tailwind
+- Clerk authentication
+- Prisma + PostgreSQL
+- TanStack Query for polling
+
+## Prerequisites
+
+- Node.js 22+
+- npm
+- A PostgreSQL database (the same one the EC2 worker uses)
+- Clerk application keys
+
+## Setup
 
 ```bash
-pnpm install
-# or
+cd Byte_Learn_17
+cp .env.example .env.local
+# fill in DATABASE_URL and Clerk keys
 npm install
-# or
-yarn install
-```
-
-### 3. Environment Setup
-
-Create a `.env.local` file in the root directory:
-
-```env
-# GitHub PAT with Models: read permission
-GITHUB_TOKEN=
-# Optional; defaults to openai/gpt-4.1
-GITHUB_MODELS_MODEL=openai/gpt-4.1
-
-DEEPGRAM_API_KEY=
-# Optional female English voice
-DEEPGRAM_TTS_MODEL=aura-2-thalia-en
-ENABLE_TTS=true
-```
-
-Deepgram Aura does not currently support the Indian-language narration options
-shown by the existing UI. Keep English selected when `ENABLE_TTS=true`.
-
-### 4. Database Setup
-
-Run Prisma migrations to set up your database:
-
-```bash
-pnpm prisma migrate dev
-# or
-npx prisma migrate dev
-```
-
-Generate Prisma client:
-
-```bash
-pnpm prisma generate
-# or
 npx prisma generate
-```
-
-### 5. Start the Development Server
-
-```bash
-pnpm dev
-# or
 npm run dev
-# or
-yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
+Open [http://localhost:3000](http://localhost:3000).
 
-### 6. Start the Python Backend (Optional)
+Do not run `prisma migrate dev` or `prisma migrate deploy` against production from a laptop unless you intend to apply the pending migration. Local `npm run dev` only needs a reachable `DATABASE_URL` for listing/creating rows.
 
-For video generation functionality, you need to run the Python backend:
+## Environment
+
+Vercel needs:
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Postgres connection string |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk browser key |
+| `CLERK_SECRET_KEY` | Clerk server key |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in` |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up` |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/dashboard` |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/dashboard` |
+
+Cursor, Deepgram, Supabase storage, and renderer secrets belong on EC2 only. See the backend README.
+
+## Database schema
+
+- **User** — Clerk-linked account
+- **Prompt** — learning prompt and language
+- **Script** — generated Manim script, explanation, narration
+- **Audio** — narration audio URL
+- **Video** — render status and `videoUrl`
+- **Mux** — worker job: `status`, `stage`, `attempts`, `finalvideoUrl`, `errorMessage`
+
+`Mux.stage` values while a job is running: `queued`, `planning`, `narrating`, `coding`, `checking`, `rendering`.
+
+## Generation flow
+
+1. `POST /api/generate` validates the prompt, upserts the Clerk user, and in one transaction creates a Prompt, a Video (`QUEUED`), and a Mux (`QUEUED`, `stage=queued`). It returns `202` with `{ success, promptId, promptRecordId }`.
+2. The UI navigates to `/learn?id={promptId}` and polls `GET /api/videos/{id}` every 5 seconds until `COMPLETED` or `FAILED`.
+3. The EC2 worker claims the Mux row, advances `stage`, and writes the final URL.
+4. Generation typically takes 15–40 minutes.
+
+## Migrations
+
+Apply Prisma migrations from this package. Run this **once against the production database before deploying the new EC2 worker**:
 
 ```bash
-cd ../byte_learn_backend
-pip install -r requirements.txt
-uvicorn main:app --reload
+npx prisma migrate deploy
 ```
 
-The backend will be available at `http://localhost:8000`
+That applies `20261119120000_add_mux_stage_attempts` (`Mux.stage`, `Mux.attempts`). The worker will not start cleanly if those columns are missing.
 
-## 📁 Project Structure
-
-```
-byte_learn_17/
-├── src/
-│   ├── app/                    # Next.js app directory
-│   │   ├── api/               # API routes
-│   │   │   ├── generate/     # Content generation endpoints
-│   │   │   ├── prompts/      # Prompt management
-│   │   │   ├── videos/       # Video processing
-│   │   │   └── webhooks/     # Webhook handlers
-│   │   ├── dashboard/        # User dashboard
-│   │   ├── learn/            # Learning page
-│   │   ├── sign-in/          # Authentication
-│   │   └── sign-up/
-│   ├── components/            # React components
-│   │   ├── ui/               # UI components (shadcn/ui)
-│   │   ├── Dashboard.tsx
-│   │   ├── LearningPage.tsx
-│   │   └── ...
-│   └── lib/                   # Utilities and configurations
-│       ├── prisma.ts         # Database client
-│       └── generation/       # Content generation logic
-├── prisma/
-│   └── schema.prisma         # Database schema
-├── public/                    # Static assets
-└── package.json
-```
-
-## 🗄️ Database Schema
-
-The application uses PostgreSQL with the following main models:
-
-- **User**: User accounts (linked to Clerk)
-- **Prompt**: User-submitted learning prompts
-- **Script**: AI-generated Manim scripts with explanations
-- **Audio**: Generated audio narrations
-- **Video**: Rendered Manim videos
-- **Mux**: Final muxed videos with audio
-
-## 🎯 Available Scripts
+## Scripts
 
 ```bash
-# Development
-pnpm dev           # Start development server
-
-# Production
-pnpm build         # Build for production
-pnpm start         # Start production server
-
-# Database
-pnpm prisma studio # Open Prisma Studio
-pnpm prisma migrate dev # Run migrations
-
-# Linting
-pnpm lint          # Run ESLint
+npm run dev      # Next.js dev server
+npm run build    # prisma generate && next build
+npm run start    # production server
+npm run lint     # ESLint
+npx prisma generate
+npx prisma migrate deploy
 ```
 
-## 🔑 Key Features Explained
+## Deploy (Vercel)
 
-### 1. Content Generation Flow
-1. User submits a learning prompt with language preference
-2. GitHub Models generates a Manim script with explanations
-3. Deepgram Aura-2 converts English narration to speech
-4. Python backend renders the Manim animation
-5. Video and audio are muxed together
-6. Final video is stored in Supabase
-
-### 2. Background Processing
-Videos are generated asynchronously with status tracking:
-- `QUEUED`: Waiting for processing
-- `PROCESSING`: Currently being generated
-- `COMPLETED`: Ready to view
-- `FAILED`: Error occurred
-
-### 3. Narration Language
-Deepgram TTS is currently enabled for English narration. Other language choices
-return an explicit unsupported-language error instead of generating inaccurate audio.
-
-## 🚀 Deployment
-
-### Deploy to Vercel
-
-The easiest way to deploy is using the [Vercel Platform](https://vercel.com/new):
-
-1. Push your code to GitHub
-2. Import the repository in Vercel
-3. Configure environment variables
-4. Deploy!
-
-### Deploy Python Backend
-
-Deploy the `byte_learn_backend` to a Python hosting service:
-- Railway
-- Render
-- Google Cloud Run
-- AWS Lambda
-
-Update the `BACKEND_URL` and `PYTHON_BACKEND_URL` environment variables accordingly.
-
-## 📚 Learn More
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Manim Community](https://www.manim.community/)
-- [Clerk Authentication](https://clerk.com/docs)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [GitHub Models](https://docs.github.com/en/github-models)
-- [Deepgram Text-to-Speech](https://developers.deepgram.com/docs/text-to-speech)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-
-## 👥 Authors
-
-- Chidananda Reddy J - [GitHub](https://github.com/Chidanandareddyj)
-
-## 🙏 Acknowledgments
-
-- Manim Community for the amazing animation library
-- Vercel for hosting
-- All contributors who help improve this project
+1. Run `npx prisma migrate deploy` against production Postgres.
+2. Keep `DATABASE_URL` and Clerk variables on Vercel.
+3. Remove worker-only variables from Vercel (`WORKER_URL`, `VIDEO_WEBHOOK_SECRET`, `CURSOR_API_KEY`, `DEEPGRAM_API_KEY`, `ENABLE_TTS`, `BACKEND_URL`, `APP_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `MUX_BUCKET_NAME`, GitHub Models / Gemini / ElevenLabs keys).
+4. Deploy this Next.js app. Deploy the EC2 stack from `Byte_Learn_17_backend`.

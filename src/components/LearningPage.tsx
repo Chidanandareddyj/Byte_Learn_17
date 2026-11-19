@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { generationStageLabel, isGenerationInProgress } from "@/lib/generation-status";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
@@ -21,6 +22,7 @@ interface Video {
   narration: string;
   videoUrl: string | null;
   status: VideoStatus;
+  stage: string | null;
   errorMessage: string | null;
   createdAt: string;
 }
@@ -40,13 +42,13 @@ export function LearningPage() {
     },
     enabled: !!videoId,
     refetchInterval: (query) =>
-      query.state.data?.status !== "COMPLETED" ? 5000 : false,
+      isGenerationInProgress(query.state.data?.status) ? 5000 : false,
   });
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (video && (video.status === "PROCESSING" || video.status === "QUEUED")) {
+    if (video && isGenerationInProgress(video.status)) {
       interval = setInterval(() => {
         setElapsedTime((prev) => prev + 1);
       }, 1000);
@@ -69,7 +71,7 @@ export function LearningPage() {
     if (video?.status === "QUEUED") {
       return Math.min(10 + (elapsedTime * 0.5), 25);
     } else if (video?.status === "PROCESSING") {
-      const estimatedDuration = 240;
+      const estimatedDuration = 1800;
       const progress = 25 + ((elapsedTime / estimatedDuration) * 65);
       return Math.min(progress, 90);
     }
@@ -96,14 +98,27 @@ export function LearningPage() {
   const isFailed = video.status === "FAILED";
   const isCompleted = video.status === "COMPLETED";
 
-  const paragraphs = video.explanation ? video.explanation.split('\n\n') : [];
-  const chapters = paragraphs.filter(p => p.match(/^\[Scene (\d+)\]/)).map(p => {
-      const match = p.match(/^\[Scene (\d+)\]/);
-      const content = p.replace(/^\[Scene \d+\]\n?/, '');
-      return { scene: match ? match[1] : '', content };
-  });
-  
-  const generalExplanation = paragraphs.find(p => !p.match(/^\[Scene /) && p.length > 20) || "Generating intuitive visualization of the mathematical concept. Exploring algorithmic structures...";
+  const explanationText = video.explanation?.trim() ?? "";
+  const explanationChunks = explanationText
+    ? explanationText.split(/(?=\[Scene\s+\d+\])/)
+    : [];
+  const chapters = explanationChunks
+    .filter((chunk) => /^\[Scene\s+\d+\]/.test(chunk.trim()))
+    .map((chunk) => {
+      const match = chunk.trim().match(/^\[Scene\s+(\d+)\]\s*/);
+      const content = chunk.trim().replace(/^\[Scene\s+\d+\]\s*/, "").trim();
+      return { scene: match ? match[1] : "", content };
+    });
+  const summaryParagraphs = explanationChunks
+    .filter((chunk) => !/^\[Scene\s+\d+\]/.test(chunk.trim()))
+    .join("\n\n")
+    .split("\n\n")
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  const generalExplanation =
+    summaryParagraphs[0] ||
+    "Generating intuitive visualization of the mathematical concept. Exploring algorithmic structures...";
+  const extraSummaryParagraphs = summaryParagraphs.slice(1);
 
   return (
     <div className={`min-h-screen bg-bytelearn-back text-[#f0f4f2] ${sourceSerif.className} flex flex-col lg:h-screen lg:overflow-hidden`}>
@@ -140,8 +155,8 @@ export function LearningPage() {
                                 <div className="absolute top-0 left-0 h-full bg-[#f0f4f2] transition-all duration-500 shadow-[0_0_10px_#f0f4f2]" style={{ width: `${getProgressPercentage()}%` }}></div>
                             </div>
                             <div className={`flex items-center justify-between text-[10px] tracking-[0.1em] text-[#a8b5ae] uppercase ${jetbrainsMono.className}`}>
-                                <div>{video.status === 'QUEUED' ? 'AWAITING RESOURCES [DISPATCH]' : 'COMPILING SCENES [RENDER]'}</div>
-                                <div>{formatTime(elapsedTime)} / ~04:00</div>
+                                <div>{generationStageLabel(video.stage)}</div>
+                                <div>{formatTime(elapsedTime)}</div>
                                 <div>MathRenderer // GEN_04</div>
                             </div>
                         </div>
@@ -163,7 +178,7 @@ export function LearningPage() {
                 
                 <div className="mt-8 space-y-4 max-w-4xl border-t border-[rgba(255,255,255,0.1)] pt-6">
                     {chapters.length === 0 ? (
-                        video.explanation?.split('\n\n').filter(p => p !== generalExplanation && !p.match(/^\[Scene /)).map((p, idx) => (
+                        extraSummaryParagraphs.map((p, idx) => (
                             <p key={idx} className="text-[15px] text-[#a8b5ae] leading-relaxed">{p}</p>
                         ))
                     ) : (
@@ -197,6 +212,8 @@ export function LearningPage() {
                             </li>
                         ))}
                     </ul>
+                ) : explanationText ? (
+                    <p className="text-[14px] text-[#a8b5ae] leading-relaxed">{explanationText}</p>
                 ) : (
                     <div className={`text-[10px] text-[#a8b5ae] italic ${jetbrainsMono.className}`}>
                         [AWAITING_STRUCTURAL_ANALYSIS]

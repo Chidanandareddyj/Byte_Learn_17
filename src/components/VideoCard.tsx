@@ -1,5 +1,6 @@
-import { Play, Download, AlertTriangle } from "lucide-react";
+import { Play, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { generationStageLabel, isGenerationInProgress } from "@/lib/generation-status";
 import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
@@ -12,28 +13,26 @@ interface VideoCardProps {
   title: string;
   videoUrl: string | null;
   status: VideoStatus;
+  stage?: string | null;
   errorMessage: string | null;
   date: string;
 }
 
-export function VideoCard({ id, title, videoUrl, status, errorMessage, date }: VideoCardProps) {
+export function VideoCard({ id, title, videoUrl, status, stage, errorMessage }: VideoCardProps) {
   const isReady = status === "COMPLETED" && !!videoUrl;
   const isFailed = status === "FAILED";
 
   const getStatusText = () => {
     switch (status) {
       case "COMPLETED": return "MP4 // RENDER_COMPLETE";
-      case "PROCESSING": return "PENDING_COMPILATION";
-      case "QUEUED": return "QUEUED_IN_PIPELINE";
       case "FAILED": return "ERR_GENERATION_FAILED";
-      default: return "";
+      default: return generationStageLabel(stage);
     }
   };
 
   const getTimeLabel = () => {
-    if (isReady) return "00:24"; // Placeholder duration since we don't have it in data model
-    if (status === "PROCESSING") return "SYNC";
-    if (status === "QUEUED") return "WAIT";
+    if (isReady) return "00:24";
+    if (isGenerationInProgress(status)) return status === "QUEUED" ? "WAIT" : "SYNC";
     return "ERR";
   };
 

@@ -80,6 +80,8 @@ model Mux{
   status GenerationStatus @default(QUEUED)
   jobId String?
   errorMessage String?
+  stage    String?
+  attempts Int     @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   promptId String

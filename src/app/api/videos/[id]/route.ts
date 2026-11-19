@@ -18,7 +18,6 @@ export async function GET(
 
     const { id } = await params;
 
-    // Find the prompt by promptId
     const prompt = await prisma.prompt.findUnique({
       where: {
         promptId: id,
@@ -52,11 +51,6 @@ export async function GET(
       );
     }
 
-    // Check if user has access to this video
-    // Allow access if:
-    // 1. The video belongs to the current user
-    // 2. The video has no clerkId (old data)
-    // 3. The video has "unknown" clerkId (old data)
     if (
       prompt.clerkId &&
       prompt.clerkId !== "unknown" &&
@@ -69,25 +63,12 @@ export async function GET(
     }
 
     const script = prompt.scripts[0];
-    const mux = prompt.muxes[0] as unknown as {
-      finalvideoUrl?: string | null;
-      status?: string;
-      errorMessage?: string | null;
-    } | undefined;
+    const mux = prompt.muxes[0];
+    const videoRecord = prompt.videos[0];
 
-    const videoRecord = prompt.videos[0] as unknown as {
-      status?: string;
-      errorMessage?: string | null;
-    } | undefined;
-
-    const jobStatus =
-      (mux?.status as string | undefined) ||
-      (videoRecord?.status as string | undefined) ||
-      "PROCESSING";
-
+    const jobStatus = mux?.status ?? videoRecord?.status ?? "QUEUED";
     const jobError = mux?.errorMessage ?? videoRecord?.errorMessage ?? null;
 
-    // Parse the explanation and narration
     let parsedExplanation = "";
     let parsedNarration = "";
 
@@ -106,6 +87,7 @@ export async function GET(
       narration: parsedNarration,
       videoUrl: mux?.finalvideoUrl || null,
       status: jobStatus,
+      stage: mux?.stage ?? null,
       errorMessage: jobError,
       createdAt: prompt.createdAt.toISOString(),
     };

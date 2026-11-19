@@ -13,14 +13,10 @@ export async function GET() {
       );
     }
 
-    // Fetch all prompts for this user with their related videos and muxes
-    // Include prompts with null clerkId to show existing videos created before the fix
     const prompts = await prisma.prompt.findMany({
       where: {
         OR: [
           { clerkId: clerkUser.id },
-          // { clerkId: null }, // Include prompts without a clerkId (old data)
-          // { clerkId: "unknown" }, // Include prompts with "unknown" clerkId (old data)
         ]
       },
       include: {
@@ -50,18 +46,9 @@ export async function GET() {
 
     console.log("Prompts found for user:", prompts.length);
 
-    // Transform the data to match the expected Video interface
     const videos = prompts.map((prompt) => {
-      const latestMux = prompt.muxes[0] as unknown as {
-        finalvideoUrl?: string | null;
-        status?: string;
-        errorMessage?: string | null;
-      } | undefined;
-      const latestVideo = prompt.videos[0] as unknown as {
-        videoUrl?: string | null;
-        status?: string;
-        errorMessage?: string | null;
-      } | undefined;
+      const latestMux = prompt.muxes[0];
+      const latestVideo = prompt.videos[0];
 
       return {
         id: prompt.promptId,
@@ -69,10 +56,8 @@ export async function GET() {
         prompt: prompt.prompt,
         createdAt: prompt.createdAt.toISOString(),
         videoUrl: latestMux?.finalvideoUrl || null,
-        status:
-          (latestMux?.status as string | undefined) ||
-          (latestVideo?.status as string | undefined) ||
-          "PROCESSING",
+        status: latestMux?.status ?? latestVideo?.status ?? "QUEUED",
+        stage: latestMux?.stage ?? null,
         errorMessage:
           latestMux?.errorMessage ?? latestVideo?.errorMessage ?? null,
       };

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2, Languages } from "lucide-react";
+import { isGenerationInProgress } from "@/lib/generation-status";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 
@@ -23,6 +24,7 @@ interface Video {
   createdAt: string;
   videoUrl: string | null;
   status: VideoStatus;
+  stage: string | null;
   errorMessage: string | null;
 }
 
@@ -52,7 +54,7 @@ export function Dashboard() {
       return res.json();
     },
     refetchInterval: (query) =>
-      query.state.data?.some((video: Video) => video.status !== "COMPLETED")
+      query.state.data?.some((video: Video) => isGenerationInProgress(video.status))
         ? 5000
         : false,
   });
@@ -65,6 +67,10 @@ export function Dashboard() {
         credentials: "include",
         body: JSON.stringify(data),
       });
+      if (res.status === 401) {
+        router.push("/sign-in");
+        throw new Error("Please sign in to generate a video.");
+      }
       if (!res.ok) throw new Error("Failed to generate");
       return res.json();
     },
@@ -152,6 +158,13 @@ export function Dashboard() {
                       </>
                     )}
                   </Button>
+                  {generateMutation.isError && (
+                    <p className="text-sm text-red-500 text-center">
+                      {generateMutation.error instanceof Error
+                        ? generateMutation.error.message
+                        : "Failed to generate"}
+                    </p>
+                  )}
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <p className="font-medium">Tips:</p>
                     <ul className="list-disc list-inside space-y-1">
@@ -184,6 +197,7 @@ export function Dashboard() {
                     title={video.title}
                     videoUrl={video.videoUrl}
                     status={video.status}
+                    stage={video.stage}
                     errorMessage={video.errorMessage}
                     date={formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
                   />
