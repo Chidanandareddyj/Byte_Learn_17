@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { ArrowLeft, Check, Download, Maximize, Pause, Play, Share2, Sparkles, X } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { PythagorasFigure } from "@/components/ChalkFigures";
 import { generationStageLabel, isGenerationInProgress } from "@/lib/generation-status";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
-
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
-const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["300", "400", "500"], style: ["normal", "italic"] });
 
 type VideoStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
 
@@ -29,10 +27,13 @@ interface Video {
 
 export function LearningPage() {
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [playback, setPlayback] = useState(0); // 0..1 of the video watched
+  const [copied, setCopied] = useState(false);
+  const quizRef = useRef<HTMLDialogElement>(null);
   const searchParams = useSearchParams();
   const videoId = searchParams.get("id") ?? undefined;
 
-  const { data: video, isLoading } = useQuery<Video>({
+  const { data: video, isLoading, isError } = useQuery<Video>({
     queryKey: ["/api/videos", videoId],
     queryFn: async () => {
       if (!videoId) throw new Error("No video ID");
@@ -79,16 +80,28 @@ export function LearningPage() {
   };
 
   if (isLoading) {
-    return <LoadingScreen />;
+    return (
+      <div className="min-h-screen">
+        <Navbar variant="app" />
+        <div className="flex min-h-screen items-center justify-center" role="status">
+          <p className="hand text-[30px] text-yellow motion-safe:animate-pulse">opening your lesson…</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!video) {
+  if (!video || isError) {
     return (
-      <div className={`min-h-screen bg-bytelearn-back text-[#f0f4f2] ${sourceSerif.className} flex flex-col`}>
+      <div className="flex min-h-screen flex-col">
         <Navbar variant="app" />
-        <div className="flex items-center justify-center flex-1">
-          <div className="p-8 text-center text-[#a8b5ae] border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.2)]">
-            <p>Error: Video not found</p>
+        <div className="flex flex-1 items-center justify-center px-5 pt-[72px]">
+          <div className="board w-full max-w-[520px] px-8 py-10 text-center">
+            <p className="hand text-[30px] text-pink">hmm, this page of the notebook is blank</p>
+            <h1 className="mt-2 font-serif italic text-[34px] text-chalk">We couldn&apos;t find that lesson</h1>
+            <p className="mt-2 text-muted-foreground">The link may be wrong, or the lesson was removed.</p>
+            <Link href="/dashboard" className="btn-pill btn-pill-primary mt-6">
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to my notebook
+            </Link>
           </div>
         </div>
       </div>
@@ -115,170 +128,205 @@ export function LearningPage() {
     .split("\n\n")
     .map((chunk) => chunk.trim())
     .filter(Boolean);
-  const generalExplanation =
-    summaryParagraphs[0] ||
-    "Generating intuitive visualization of the mathematical concept. Exploring algorithmic structures...";
+  const generalExplanation = summaryParagraphs[0] || "";
   const extraSummaryParagraphs = summaryParagraphs.slice(1);
 
-  return (
-    <div className={`min-h-screen bg-bytelearn-back text-[#f0f4f2] ${sourceSerif.className} flex flex-col lg:h-screen lg:overflow-hidden`}>
-      <Navbar variant="app" />
-      
-      <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[1fr_400px] lg:h-[calc(100vh-80px)] mt-[80px]">
-        
-        {/* Left Player Area */}
-        <section className="p-4 sm:p-6 lg:p-10 flex flex-col border-b lg:border-b-0 lg:border-r border-[rgba(255,255,255,0.2)] lg:overflow-y-auto relative custom-scrollbar">
-            <div className="absolute inset-0 bg-bytelearn-spatial opacity-10 pointer-events-none"></div>
-            
-            <div className="w-full aspect-video bg-black relative border border-[rgba(255,255,255,0.2)] flex items-center justify-center mb-6 overflow-hidden shadow-2xl shrink-0">
-                {!isCompleted && !isFailed && (
-                   <div className="absolute inset-0 bg-bytelearn-spatial opacity-20" style={{ backgroundSize: '40px 40px' }}></div>
-                )}
-                
-                {isCompleted && video.videoUrl ? (
-                    <CustomVideoPlayer url={video.videoUrl} />
-                ) : isFailed ? (
-                    <div className="relative z-10 text-center text-[#ff3333] flex flex-col items-center">
-                        <span className="text-4xl italic mb-4">FAILED TO COMPILE</span>
-                        <div className={`text-[10px] uppercase font-mono tracking-widest text-[#a8b5ae] ${jetbrainsMono.className}`}>
-                            {video.errorMessage || "System error during visualization compiling."}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="relative w-full h-full flex flex-col items-center justify-center">
-                        <div className="text-[48px] italic text-[#f0f4f2] opacity-30 pointer-events-none drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] absolute">
-                            ∫<sub className="text-[20px] ml-1">Γ</sub> f(z) dz = 0
-                        </div>
-                        
-                        <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black to-transparent flex flex-col gap-3">
-                            <div className="h-[2px] bg-[rgba(255,255,255,0.2)] relative overflow-hidden">
-                                <div className="absolute top-0 left-0 h-full bg-[#f0f4f2] transition-all duration-500 shadow-[0_0_10px_#f0f4f2]" style={{ width: `${getProgressPercentage()}%` }}></div>
-                            </div>
-                            <div className={`flex items-center justify-between text-[10px] tracking-[0.1em] text-[#a8b5ae] uppercase ${jetbrainsMono.className}`}>
-                                <div>{generationStageLabel(video.stage)}</div>
-                                <div>{formatTime(elapsedTime)}</div>
-                                <div>MathRenderer // GEN_04</div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+  const transcript = video.narration ? video.narration.split("\n\n").map((t) => t.trim()).filter(Boolean) : [];
+  const currentLine = transcript.length ? Math.min(transcript.length - 1, Math.floor(playback * transcript.length)) : -1;
+  const currentChapter = chapters.length ? Math.min(chapters.length - 1, Math.floor(playback * chapters.length)) : -1;
+  const inProgress = isGenerationInProgress(video.status);
 
-            <div className="relative z-10 flex-col flex gap-2">
-                <h1 className="text-2xl sm:text-3xl font-light italic mb-1">{video.title}</h1>
-                <div className={`flex flex-wrap gap-2 sm:gap-6 text-[10px] sm:text-[11px] text-[#a8b5ae] border-b border-[rgba(255,255,255,0.2)] pb-4 sm:pb-5 mb-4 sm:mb-5 uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>
-                    <span>ID: DERIVATION_{video.id?.[0]?.toUpperCase() ?? 'X'}{video.id?.slice(-4)?.toUpperCase() ?? '0000'}</span>
-                    <span className="hidden sm:inline">|</span>
-                    <span>PUBLISHED: {format(new Date(video.createdAt || Date.now()), 'MM.dd.yy')}</span>
-                </div>
-                
-                <p className="text-[14px] sm:text-[16px] leading-[1.6] opacity-90 max-w-4xl">
-                    {generalExplanation}
+  const share = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen">
+      <Navbar variant="app" />
+
+      <main className="mx-auto mt-[72px] grid max-w-[1440px] gap-8 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:px-12">
+        {/* Player + lesson */}
+        <section className="min-w-0">
+          <div className="board relative aspect-video overflow-hidden">
+            {isCompleted && video.videoUrl ? (
+              <CustomVideoPlayer url={video.videoUrl} onProgress={setPlayback} />
+            ) : isFailed ? (
+              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                <p className="hand text-[34px] text-pink">this lesson didn&apos;t finish drawing</p>
+                <p className="mt-2 max-w-[520px] text-muted-foreground">
+                  {video.errorMessage || "Something went wrong while making the video."}
                 </p>
-                
-                <div className="mt-8 space-y-4 max-w-4xl border-t border-[rgba(255,255,255,0.1)] pt-6">
-                    {chapters.length === 0 ? (
-                        extraSummaryParagraphs.map((p, idx) => (
-                            <p key={idx} className="text-[15px] text-[#a8b5ae] leading-relaxed">{p}</p>
-                        ))
-                    ) : (
-                        chapters.map((chap, idx) => (
-                             <div key={idx} className="mb-4 text-[#a8b5ae] text-[15px] leading-[1.6]">
-                                 <strong className="text-[#f0f4f2] font-normal italic pr-2">Scene {chap.scene}:</strong>
-                                 {chap.content}
-                             </div>
-                        ))
-                    )}
+                <Link href="/dashboard" className="btn-pill mt-5">
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to my notebook
+                </Link>
+              </div>
+            ) : (
+              <div className="relative flex h-full flex-col items-center justify-center">
+                <PythagorasFigure className="h-[55%] w-auto opacity-40 motion-safe:animate-pulse" />
+                <p className="hand mt-2 text-[30px] text-yellow">{generationStageLabel(video.stage)}…</p>
+                <div className="absolute inset-x-5 bottom-5">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-chalk/15">
+                    <div className="h-full rounded-full bg-yellow transition-all duration-500" style={{ width: `${getProgressPercentage()}%` }} />
+                  </div>
+                  <div className="mt-2 flex justify-between mono-label">
+                    <span>{video.status === "QUEUED" ? "Waiting for a free board" : "Drawing your lesson"}</span>
+                    <span>{formatTime(elapsedTime)} elapsed</span>
+                  </div>
                 </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-serif italic text-[30px] leading-tight text-chalk sm:text-[34px]">{video.title || video.prompt}</h1>
+              <p className="mt-1.5 text-muted-foreground">
+                Created {format(new Date(video.createdAt || Date.now()), "MMM d, yyyy")}
+                {inProgress && " · still drawing, this page updates by itself"}
+              </p>
             </div>
+            <div className="flex gap-2.5">
+              <button type="button" className="btn-pill" disabled title="Download is coming soon">
+                <Download className="h-4 w-4" aria-hidden="true" /> Save
+              </button>
+              <button type="button" className="btn-pill" onClick={share}>
+                {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Share2 className="h-4 w-4" aria-hidden="true" />}
+                {copied ? "Link copied" : "Share"}
+              </button>
+            </div>
+          </div>
+
+          {(generalExplanation || extraSummaryParagraphs.length > 0 || chapters.length > 0) && (
+            <div className="mt-6 max-w-4xl space-y-4 border-t-[1.5px] border-dashed border-line pt-6 leading-relaxed">
+              {generalExplanation && <p className="text-[17px] text-chalk/90">{generalExplanation}</p>}
+              {chapters.length === 0
+                ? extraSummaryParagraphs.map((p, idx) => (
+                    <p key={idx} className="text-muted-foreground">{p}</p>
+                  ))
+                : chapters.map((chap, idx) => (
+                    <p key={idx} className="text-muted-foreground">
+                      <span className="hand pr-2 text-[22px] text-yellow">{idx + 1}.</span>
+                      {chap.content}
+                    </p>
+                  ))}
+            </div>
+          )}
         </section>
 
-        {/* Right Sidebar Area */}
-        <aside className="bg-[rgba(0,0,0,0.2)] flex flex-col lg:overflow-y-auto border-t lg:border-t-0 lg:border-l border-[rgba(255,255,255,0.1)] custom-scrollbar">
-            
-            {/* Structural Chapters Overview */}
-            <div className="p-4 sm:p-6 lg:p-8 border-b border-[rgba(255,255,255,0.2)]">
-                <div className={`text-[10px] sm:text-[11px] text-[#a8b5ae] uppercase mb-4 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
-                    <div className="w-1 h-1 bg-[#f0f4f2]"></div>
-                    Structural Chapters
-                </div>
-                
-                {chapters.length > 0 ? (
-                    <ul className="list-none flex flex-col text-[14px]">
-                        {chapters.map((chap, idx) => (
-                            <li key={idx} className={`flex justify-between py-3 border-b border-[rgba(255,255,255,0.1)] last:border-0 ${idx === 0 ? 'text-[#f0f4f2] italic' : 'text-[#a8b5ae]'}`}>
-                                <span className="truncate pr-4">{String(idx + 1).padStart(2,'0')}. {chap.content.split(' ').slice(0, 4).join(' ')}...</span>
-                                <span className={`text-[10px] mt-1 shrink-0 ${jetbrainsMono.className}`}>00:00</span>
-                            </li>
-                        ))}
-                    </ul>
-                ) : explanationText ? (
-                    <p className="text-[14px] text-[#a8b5ae] leading-relaxed">{explanationText}</p>
-                ) : (
-                    <div className={`text-[10px] text-[#a8b5ae] italic ${jetbrainsMono.className}`}>
-                        [AWAITING_STRUCTURAL_ANALYSIS]
-                    </div>
-                )}
-            </div>
+        {/* Chapters, notes, quiz */}
+        <aside className="space-y-4">
+          <div className="rounded-[14px] border-[1.5px] border-line bg-board p-3">
+            <p className="mono-label px-3 pb-1 pt-1">Chapters</p>
+            {chapters.length > 0 ? (
+              <ol>
+                {chapters.map((chap, idx) => (
+                  <li
+                    key={idx}
+                    aria-current={idx === currentChapter ? "step" : undefined}
+                    className={`flex items-center gap-3 rounded-[10px] px-3 py-2 ${idx === currentChapter ? "bg-yellow/15 font-bold text-yellow" : "text-muted-foreground"}`}
+                  >
+                    <span className="hand w-6 text-[24px] leading-none">{idx + 1}</span>
+                    <span className="line-clamp-1 flex-1">{chap.content.split(" ").slice(0, 6).join(" ")}…</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="px-3 pb-2 text-[15px] text-muted-foreground">
+                {inProgress ? "Chapters appear once the lesson is planned." : "This lesson has no chapters."}
+              </p>
+            )}
+          </div>
 
-            {/* Active Axioms (Prompt) */}
-            <div className="p-4 sm:p-6 lg:p-8 border-b border-[rgba(255,255,255,0.2)]">
-                <div className={`text-[10px] sm:text-[11px] text-[#a8b5ae] uppercase mb-4 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
-                    <div className="w-1 h-1 bg-[#f0f4f2]"></div>
-                    Learning Prompt
-                </div>
-                
-                <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.2)] p-5 mb-4 text-center text-[18px] italic leading-relaxed break-words">
-                    {video.prompt}
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                    <span className={`text-[9px] px-2 py-1 border border-[rgba(255,255,255,0.2)] text-[#a8b5ae] uppercase tracking-wide ${jetbrainsMono.className}`}>User_Input</span>
-                    <span className={`text-[9px] px-2 py-1 border border-[rgba(255,255,255,0.2)] text-[#a8b5ae] uppercase tracking-wide ${jetbrainsMono.className}`}>Prompt</span>
-                </div>
-            </div>
+          <div className="paper px-5 pb-5 pt-3 leading-[32px]">
+            <h2 className="hand text-[26px] leading-[32px] text-[#D9534F]">Notes (live transcript)</h2>
+            {transcript.length > 0 ? (
+              <div className="max-h-[360px] overflow-y-auto pr-1">
+                {transcript.map((line, idx) => (
+                  <p
+                    key={idx}
+                    aria-current={idx === currentLine ? "true" : undefined}
+                    className={`text-[16px] leading-[32px] transition-colors ${idx === currentLine ? "text-pen" : "text-[#5A6478]"}`}
+                  >
+                    <span
+                      className={idx === currentLine ? "[box-decoration-break:clone] [-webkit-box-decoration-break:clone]" : undefined}
+                      style={idx === currentLine ? { backgroundImage: "linear-gradient(transparent 55%, #F4D35E99 55%)" } : undefined}
+                    >
+                      {line}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[16px] text-[#5A6478]">
+                {inProgress ? "The narration is being written. It will appear here." : "No transcript for this lesson."}
+              </p>
+            )}
+          </div>
 
-            {/* Narration Transcript */}
-            <div className="p-4 sm:p-6 lg:p-8">
-                <div className={`text-[10px] sm:text-[11px] text-[#a8b5ae] uppercase mb-4 flex items-center gap-2 tracking-[0.1em] ${jetbrainsMono.className}`}>
-                    <div className="w-1 h-1 bg-[#f0f4f2]"></div>
-                    Narration Transcript
-                </div>
-                
-                <div className="space-y-4 text-[13px] text-[#a8b5ae] opacity-80 leading-relaxed border-l border-[rgba(255,255,255,0.1)] pl-4">
-                    {video.narration ? (
-                        video.narration.split('\n\n').map((p, idx) => (
-                            <p key={idx}>{p}</p>
-                        ))
-                    ) : (
-                        <p className={`text-[10px] italic ${jetbrainsMono.className}`}>[GENERATING_VOCAL_TRACT...]</p>
-                    )}
-                </div>
-            </div>
-            
+          <button
+            type="button"
+            className="btn-pill btn-pill-primary w-full"
+            onClick={() => quizRef.current?.showModal()}
+            disabled={!isCompleted}
+          >
+            <Sparkles className="h-4 w-4" aria-hidden="true" /> Quiz me on this
+          </button>
+
+          <div className="rounded-[14px] border-[1.5px] border-dashed border-line p-4">
+            <p className="mono-label">Your question</p>
+            <p className="mt-1.5 font-serif italic text-[18px] text-chalk break-words">“{video.prompt}”</p>
+          </div>
         </aside>
       </main>
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.4);
-        }
-      `}} />
+
+      {/* Quiz me: UI-only placeholder. No API calls. */}
+      <dialog
+        ref={quizRef}
+        aria-labelledby="quiz-title"
+        className="paper m-auto w-[min(520px,92vw)] p-0 backdrop:bg-slate/70 backdrop:backdrop-blur-sm"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) quizRef.current?.close();
+        }}
+      >
+        <div className="relative px-7 pb-7 pt-5 leading-[32px]">
+          <button
+            type="button"
+            onClick={() => quizRef.current?.close()}
+            className="absolute right-4 top-4 rounded-full p-1 text-pen hover:bg-pen/10"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <p className="hand text-[26px] text-[#D9534F]">coming soon</p>
+          <h2 id="quiz-title" className="font-serif italic text-[28px] leading-tight text-pen">Quizzes are on the way</h2>
+          <p className="mt-2 text-[16px] leading-[26px] text-pen/80">
+            Soon you&apos;ll get three quick questions written from this lesson to check what stuck.
+          </p>
+          <div className="mt-4 rounded-[10px] border-[1.5px] border-dashed border-pen/30 bg-white/50 px-4 py-3 leading-[24px]">
+            <p className="mono-label !text-pen/70">Example (not from this lesson)</p>
+            <p className="mt-1 font-bold text-pen">A right triangle has legs 3 and 4. How long is the longest side?</p>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {["5", "6", "7"].map((a) => (
+                <li key={a} className="chip">{a}</li>
+              ))}
+            </ul>
+          </div>
+          <button type="button" onClick={() => quizRef.current?.close()} className="btn-pill mt-5 w-full border-pen bg-pen text-paper hover:bg-pen/90 hover:text-paper">
+            Got it
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }
 
-function CustomVideoPlayer({ url }: { url: string }) {
+function CustomVideoPlayer({ url, onProgress }: { url: string; onProgress?: (fraction: number) => void }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -290,7 +338,9 @@ function CustomVideoPlayer({ url }: { url: string }) {
 
         const handleTimeUpdate = () => {
             setCurrentTime(videoElement.currentTime);
-            setProgress((videoElement.currentTime / videoElement.duration) * 100);
+            const fraction = videoElement.duration ? videoElement.currentTime / videoElement.duration : 0;
+            setProgress(fraction * 100);
+            onProgress?.(fraction);
         };
 
         const handleLoadedMetadata = () => {
@@ -310,7 +360,7 @@ function CustomVideoPlayer({ url }: { url: string }) {
             videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
             videoElement.removeEventListener('ended', handleEnded);
         };
-    }, [videoElement]);
+    }, [videoElement, onProgress]);
 
     const togglePlay = () => {
         if (!videoElement) return;
@@ -323,62 +373,65 @@ function CustomVideoPlayer({ url }: { url: string }) {
     };
 
     const formatTime = (timeInSeconds: number) => {
-        if (isNaN(timeInSeconds)) return "00:00";
-        const m = Math.floor(timeInSeconds / 60).toString().padStart(2, '0');
+        if (isNaN(timeInSeconds)) return "0:00";
+        const m = Math.floor(timeInSeconds / 60).toString();
         const s = Math.floor(timeInSeconds % 60).toString().padStart(2, '0');
         return `${m}:${s}`;
     };
 
     return (
-        <div className="relative w-full h-full group" onClick={togglePlay}>
+        <div className="group relative h-full w-full bg-slate" onClick={togglePlay}>
             <video
                 ref={setVideoElement}
                 src={url}
-                className="w-full h-full object-contain relative z-10"
+                className="relative z-10 h-full w-full object-contain"
                 controlsList="nodownload"
             />
-            
-            {/* Overlay Gradient (appears on hover or when paused) */}
-            <div className={`absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[rgba(0,0,0,0.8)] to-transparent z-20 flex flex-col gap-3 transition-opacity duration-300 ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
-                
-                {/* Progress Bar */}
-                <div className="h-[2px] bg-[rgba(255,255,255,0.2)] relative cursor-pointer" onClick={(e) => {
-                    e.stopPropagation();
-                    if (!videoElement) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const pos = (e.clientX - rect.left) / rect.width;
-                    videoElement.currentTime = pos * videoElement.duration;
-                }}>
-                    <div 
-                        className="absolute top-0 left-0 h-full bg-[#f0f4f2] transition-all duration-100" 
-                        style={{ width: `${progress}%` }}
-                    />
+
+            <div className={`absolute inset-x-0 bottom-0 z-20 flex items-center gap-3.5 bg-gradient-to-t from-black/60 to-transparent px-4 pb-3.5 pt-8 transition-opacity duration-300 ${isPlaying ? 'opacity-0 group-hover:opacity-100 focus-within:opacity-100' : 'opacity-100'}`}>
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-yellow text-slate"
+                    aria-label={isPlaying ? "Pause" : "Play"}
+                >
+                    {isPlaying ? <Pause className="h-4 w-4" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
+                </button>
+                <span className="mono-label !text-chalk">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                <div
+                    className="relative h-1.5 flex-1 cursor-pointer rounded-full bg-white/20"
+                    role="slider"
+                    aria-label="Seek"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(progress)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!videoElement) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const pos = (e.clientX - rect.left) / rect.width;
+                        videoElement.currentTime = pos * videoElement.duration;
+                    }}
+                >
+                    <div className="h-full rounded-full bg-yellow" style={{ width: `${progress}%` }} />
                 </div>
-                
-                {/* Controls Row */}
-                <div className={`flex items-center justify-between text-[10px] tracking-[0.1em] text-[#f0f4f2] font-mono uppercase ${jetbrainsMono.className}`}>
-                    <div className="cursor-pointer hover:text-white" onClick={(e) => { e.stopPropagation(); togglePlay(); }}>
-                        PLAY // PAUSE [SPACE]
-                    </div>
-                    <div className="text-[#a8b5ae]">
-                        {formatTime(currentTime)} / {formatTime(duration)}
-                    </div>
-                    <div className="text-[#a8b5ae]">
-                        HD // 60 FPS
-                    </div>
-                </div>
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); videoElement?.requestFullscreen?.(); }}
+                    className="text-chalk hover:text-yellow"
+                    aria-label="Full screen"
+                >
+                    <Maximize className="h-5 w-5" aria-hidden="true" />
+                </button>
             </div>
 
-            {/* Big Center Play Icon when paused */}
             {!isPlaying && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
-                    <div className="w-16 h-16 rounded-full border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.4)] backdrop-blur-sm flex items-center justify-center">
-                        <div className="w-0 h-0 border-t-8 border-t-transparent border-l-[12px] border-l-[#f0f4f2] border-b-8 border-b-transparent ml-1"></div>
+                <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow/90 text-slate shadow-lg">
+                        <Play className="ml-1 h-7 w-7" aria-hidden="true" />
                     </div>
                 </div>
             )}
         </div>
     );
 }
-
-
