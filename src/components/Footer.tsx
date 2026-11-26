@@ -1,53 +1,88 @@
 import { GraduationCap } from "lucide-react";
 import Link from "next/link";
-import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
 
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
-const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["300", "400", "500"], style: ["normal", "italic"] });
+const productLinks = [
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#examples", label: "Examples" },
+  { href: "/#languages", label: "Languages" },
+  { href: "/dashboard", label: "Dashboard" },
+];
+
+const companyLinks = ["About", "Contact", "Privacy"];
 
 export function Footer() {
   return (
-    <footer className="bg-bytelearn-back border-t border-[rgba(255,255,255,0.15)] relative z-10 w-full mt-20">
-      <div className="max-w-[1440px] mx-auto px-8 lg:px-20 py-16">
-        <div className="grid gap-12 md:grid-cols-4">
-          <div className="md:col-span-2">
-            <div className={`flex items-center gap-3 mb-6 ${sourceSerif.className}`}>
-              <GraduationCap className="h-8 w-8 text-[#f0f4f2]" />
-              <span className="text-[20px] tracking-[0.1em] uppercase italic text-[#f0f4f2]">ByteLearn</span>
-            </div>
-            <p className={`text-[#a8b5ae] max-w-md font-light leading-relaxed text-base ${sourceSerif.className}`}>
-              Transforming education through visual learning. Learn concepts visually, one byte at a time.
+    <footer className="relative z-10 mt-20 w-full border-t border-line/70">
+      <div className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 lg:px-12">
+        <div className="grid gap-12 md:grid-cols-[1.6fr_1fr_1fr]">
+          <div>
+            <Link
+              href="/"
+              aria-label="ByteLearn home"
+              className="inline-flex items-center gap-2.5 text-chalk transition-opacity hover:opacity-90"
+            >
+              <GraduationCap
+                className="h-6 w-6 text-yellow"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span className="font-serif text-[20px] font-normal italic uppercase leading-none tracking-[0.14em]">
+                ByteLearn
+              </span>
+            </Link>
+            <p className="mt-5 max-w-md text-[15px] leading-relaxed text-muted">
+              A warm classroom for curious minds. Turn any question into a
+              chalkboard-style lesson, narrated in the language you think in.
+            </p>
+            <p className="hand mt-4 text-[22px] text-yellow">
+              learn something new today
             </p>
           </div>
 
           <div>
-            <h4 className={`text-[11px] text-[#f0f4f2] uppercase tracking-[0.1em] mb-6 ${jetbrainsMono.className}`}>Product</h4>
-            <ul className={`space-y-4 text-[10px] text-[#a8b5ae] uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>
-              <li>
-                <Link href="#features" className="hover:text-[#f0f4f2] transition-colors">Features_</Link>
-              </li>
-              <li>
-                <Link href="/dashboard" className="hover:text-[#f0f4f2] transition-colors">Dashboard_</Link>
-              </li>
-              <li>
-                <Link href="#" className="hover:text-[#f0f4f2] transition-colors">Pricing_</Link>
-              </li>
+            <h2 className="mono-label mb-5 text-chalk/80">Product</h2>
+            <ul className="space-y-3 text-[15px] text-muted">
+              {productLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="transition-colors hover:text-chalk"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
-            <h4 className={`text-[11px] text-[#f0f4f2] uppercase tracking-[0.1em] mb-6 ${jetbrainsMono.className}`}>Company</h4>
-            <ul className={`space-y-4 text-[10px] text-[#a8b5ae] uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>
-              <li><Link href="#" className="hover:text-[#f0f4f2] transition-colors">About_</Link></li>
-              <li><Link href="#" className="hover:text-[#f0f4f2] transition-colors">Contact_</Link></li>
-              <li><Link href="#" className="hover:text-[#f0f4f2] transition-colors">Privacy_</Link></li>
+            <h2 className="mono-label mb-5 text-chalk/80">Company</h2>
+            <ul className="space-y-3 text-[15px] text-muted">
+              {companyLinks.map((label) => (
+                <li key={label}>
+                  <span
+                    aria-disabled="true"
+                    title={`${label} is coming soon`}
+                    className="inline-flex cursor-default items-center gap-2"
+                  >
+                    {label}
+                    <span className="mono-label rounded-full border border-yellow/30 px-2 py-0.5 text-[9px] text-yellow/80">
+                      soon
+                    </span>
+                  </span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
 
-        <div className={`mt-16 pt-8 border-t border-[rgba(255,255,255,0.1)] text-left text-[9px] text-[#a8b5ae] uppercase tracking-[0.1em] flex justify-between items-center ${jetbrainsMono.className}`}>
-          <p>SYSTEM.VERSION // 2.0.4</p>
-          <p>© {new Date().getFullYear()} BYTE LEARN. COMPILING_</p>
+        <div className="mt-12 flex flex-col gap-2 border-t border-line/60 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="mono-label">
+            © {new Date().getFullYear()} ByteLearn
+          </p>
+          <p className="mono-label">
+            Made for curious minds · 9 languages
+          </p>
         </div>
       </div>
     </footer>

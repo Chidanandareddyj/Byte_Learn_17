@@ -1,24 +1,51 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import {
+  Atkinson_Hyperlegible,
+  Caveat,
+  Fraunces,
+  Space_Mono,
+} from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "./providers";
 
-const jetbrainsMono = JetBrains_Mono({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
+  weight: ["400", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-fraunces",
+  display: "swap",
 });
 
-const sourceSerif = Source_Serif_4({
+const atkinson = Atkinson_Hyperlegible({
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  style: ["normal", "italic"],
-  variable: "--font-source-serif",
+  weight: ["400", "700"],
+  variable: "--font-atkinson",
+  display: "swap",
 });
+
+const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-space-mono",
+  display: "swap",
+});
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-caveat",
+  display: "swap",
+});
+
+/* Indic scripts (Devanagari, Telugu, Tamil, Kannada, Malayalam, Bengali,
+   Gujarati) fall back to the OS's installed Noto/system fonts via the
+   font stacks in globals.css. next/font Noto loaders broke the build. */
 
 export const metadata: Metadata = {
-  title: "ByteLearn",
-  description: "Ask it. Learn it. Visual Mathematics Generator.",
+  title: "ByteLearn — Ask it. Learn it.",
+  description:
+    "Turn any question into a chalkboard-style animated lesson, narrated in English, Hindi, Telugu, Tamil, Kannada, Malayalam, Bengali, Marathi or Gujarati.",
 };
 
 export default function RootLayout({
@@ -26,10 +53,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const fontVariables = [
+    fraunces.variable,
+    atkinson.variable,
+    spaceMono.variable,
+    caveat.variable,
+  ].join(" ");
+
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`${sourceSerif.variable} ${jetbrainsMono.variable} font-serif antialiased bg-bytelearn-back text-[#f0f4f2] text-sm overflow-x-hidden min-h-screen`}>
+        <body
+          className={`${fontVariables} font-sans antialiased overflow-x-hidden min-h-screen`}
+        >
           {/* Providers ensure TanStack Query and theming are available across the app */}
           <AppProviders>{children}</AppProviders>
         </body>
