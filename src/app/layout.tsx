@@ -62,9 +62,15 @@ export default function RootLayout({
 
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" className={fontVariables}>
+        <head>
+          {/* Indic script fallbacks; unicode-range means each file only downloads when that script is shown. */}
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+          {/* eslint-disable-next-line @next/next/no-page-custom-font -- root app layout, applies to every page */}
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500&family=Noto+Sans+Devanagari:wght@400;500&family=Noto+Sans+Gujarati:wght@400;500&family=Noto+Sans+Kannada:wght@400;500&family=Noto+Sans+Malayalam:wght@400;500&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Telugu:wght@400;500&display=swap" />
+        </head>
         <body
-          className={`${fontVariables} font-sans antialiased overflow-x-hidden min-h-screen`}
+          className={`font-sans antialiased overflow-x-hidden min-h-screen`}
         >
           {/* Providers ensure TanStack Query and theming are available across the app */}
           <AppProviders>{children}</AppProviders>
