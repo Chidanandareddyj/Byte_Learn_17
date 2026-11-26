@@ -5,9 +5,19 @@ import { PythagorasFigure } from "@/components/ChalkFigures";
 
 interface LoadingScreenProps {
   prompt?: string;
+  /** Handwritten kicker above the heading. */
+  label?: string;
+  heading?: string;
+  /** Caption next to the progress bar. */
+  statusLabel?: string;
 }
 
-export function LoadingScreen({ prompt }: LoadingScreenProps) {
+export function LoadingScreen({
+  prompt,
+  label = "give us a moment…",
+  heading = "Setting up your lesson",
+  statusLabel = "Sending your question",
+}: LoadingScreenProps) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -36,8 +46,8 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
       <div aria-hidden="true" className="pointer-events-none absolute left-[8%] top-[12%] font-serif italic text-[40px] text-blue opacity-30 -rotate-6">ζ(s) = Σ n⁻ˢ</div>
       <div aria-hidden="true" className="pointer-events-none absolute bottom-[12%] right-[8%] font-serif italic text-[40px] text-pink opacity-30 rotate-3">∫ e^(−x²) dx = √π</div>
 
-      <p className="hand text-[30px] text-yellow">give us a moment…</p>
-      <h2 className="mt-1 text-center font-serif italic text-[40px] leading-tight md:text-[52px]">Setting up your lesson</h2>
+      <p className="hand text-[30px] text-yellow">{label}</p>
+      <h2 className="mt-1 text-center font-serif italic text-[40px] leading-tight md:text-[52px]">{heading}</h2>
 
       <div className="board mt-8 flex h-[240px] w-full max-w-[560px] items-center justify-center p-6 md:h-[320px]">
         <PythagorasFigure className="h-full w-auto motion-safe:animate-pulse" />
@@ -51,7 +61,7 @@ export function LoadingScreen({ prompt }: LoadingScreenProps) {
 
       <div className="mt-6 w-full max-w-[480px]">
         <div className="flex justify-between mono-label">
-          <span>Sending your question</span>
+          <span>{statusLabel}</span>
           <span>{displayedProgress}%</span>
         </div>
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-chalk/15">

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { VideoCard } from "@/components/VideoCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { BookOpen, Clock, Globe, Loader2, PenLine, Sparkles } from "lucide-react";
+import { BookOpen, Clock, Globe, PenLine, RotateCcw, Sparkles } from "lucide-react";
 import { isGenerationInProgress } from "@/lib/generation-status";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
@@ -233,7 +233,7 @@ export function Dashboard() {
               <p className="hand text-[26px] text-pink">we couldn&apos;t open your notebook</p>
               <p className="mt-1 text-muted-foreground">Check your connection and try again.</p>
               <button type="button" onClick={() => refetch()} className="btn-pill mt-4">
-                <Loader2 className="h-4 w-4" aria-hidden="true" /> Try again
+                <RotateCcw className="h-4 w-4" aria-hidden="true" /> Try again
               </button>
             </div>
           ) : videos.length > 0 ? (

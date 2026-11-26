@@ -243,7 +243,7 @@ export function LearningPage() {
             )}
           </div>
 
-          <div className="paper px-5 pb-5 pt-3 leading-[32px]">
+          <div className="paper px-5 pb-8 pt-8 leading-[32px]">
             <h2 className="hand text-[26px] leading-[32px] text-[#D9534F]">Notes (live transcript)</h2>
             {transcript.length > 0 ? (
               <div className="max-h-[360px] overflow-y-auto pr-1">
@@ -294,7 +294,7 @@ export function LearningPage() {
           if (e.target === e.currentTarget) quizRef.current?.close();
         }}
       >
-        <div className="relative px-7 pb-7 pt-5 leading-[32px]">
+        <div className="relative px-8 pb-8 pt-8 leading-[32px]">
           <button
             type="button"
             onClick={() => quizRef.current?.close()}
