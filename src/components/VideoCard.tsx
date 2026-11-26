@@ -1,10 +1,7 @@
-import { Play, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { Play, RotateCcw } from "lucide-react";
+import { FigureFor } from "@/components/ChalkFigures";
 import { generationStageLabel, isGenerationInProgress } from "@/lib/generation-status";
-import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
-
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
-const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["300", "400", "500"], style: ["normal", "italic"] });
 
 type VideoStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
 
@@ -16,83 +13,76 @@ interface VideoCardProps {
   stage?: string | null;
   errorMessage: string | null;
   date: string;
+  /** Called with the card when the user taps "Try again" on a failed lesson. */
+  onRetry?: () => void;
 }
 
-export function VideoCard({ id, title, videoUrl, status, stage, errorMessage }: VideoCardProps) {
+export function VideoCard({ id, title, videoUrl, status, stage, errorMessage, date, onRetry }: VideoCardProps) {
   const isReady = status === "COMPLETED" && !!videoUrl;
   const isFailed = status === "FAILED";
+  const inProgress = isGenerationInProgress(status);
+  const label = title || "Untitled lesson";
 
-  const getStatusText = () => {
-    switch (status) {
-      case "COMPLETED": return "MP4 // RENDER_COMPLETE";
-      case "FAILED": return "ERR_GENERATION_FAILED";
-      default: return generationStageLabel(stage);
-    }
-  };
-
-  const getTimeLabel = () => {
-    if (isReady) return "00:24";
-    if (isGenerationInProgress(status)) return status === "QUEUED" ? "WAIT" : "SYNC";
-    return "ERR";
-  };
+  const tag = isReady
+    ? { text: "Ready", cls: "bg-green/15 text-green" }
+    : isFailed
+      ? { text: "Didn't finish", cls: "bg-pink/15 text-pink" }
+      : inProgress
+        ? { text: "Drawing…", cls: "bg-yellow/15 text-yellow" }
+        : { text: "No video", cls: "bg-chalk/10 text-muted-foreground" };
 
   return (
-    <div className="bg-[#003049] border border-[rgba(255,255,255,0.15)] flex flex-col gap-3 transition-all duration-200 hover:border-[#f0f4f2] hover:-translate-y-0.5 cursor-pointer group overflow-hidden">
-      
-      {/* Thumbnail Area */}
-      <div className="w-full aspect-video bg-[#004266] border-b border-[rgba(255,255,255,0.15)] shrink-0 flex items-center justify-center relative overflow-hidden group">
-        {isReady ? (
-          <>
-             <video
-               src={videoUrl}
-               className="w-full h-full object-cover"
-               data-testid={`img-video-${id}`}
-               muted
-               playsInline
-             />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-               <Link href={`/learn?id=${id}`}>
-                 <div className="w-12 h-12 flex items-center justify-center border border-[#f0f4f2] rounded-none hover:bg-[#f0f4f2] hover:text-[#003049] text-[#f0f4f2] transition-colors" data-testid={`button-play-${id}`}>
-                   <Play className="h-5 w-5" />
-                 </div>
-               </Link>
-             </div>
-          </>
-        ) : isFailed ? (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center px-4 bg-[#003049]">
-            <AlertTriangle className="h-6 w-6 text-red-500 opacity-80" />
-            <p className={`text-[10px] text-red-400 font-medium uppercase tracking-wider ${jetbrainsMono.className}`}>Compilation Refused</p>
-          </div>
-        ) : (
-          <div className={`w-full h-full flex items-center justify-center text-[24px] text-[#f0f4f2] opacity-40 font-light italic ${sourceSerif.className}`}>
-             f(x)
-          </div>
+    <article className="group grid grid-cols-[150px_1fr] items-center gap-4 rounded-[14px] border-[1.5px] border-line bg-board p-3 transition-colors hover:border-chalk/40">
+      <Link
+        href={`/learn?id=${id}`}
+        className="relative block h-[96px] overflow-hidden rounded-lg bg-slate px-2.5 py-2"
+        aria-label={`Open lesson: ${label}`}
+        data-testid={`button-play-${id}`}
+      >
+        <FigureFor seed={id} className={`h-full w-full ${inProgress ? "opacity-50 motion-safe:animate-pulse" : ""}`} />
+        {isReady && (
+          <span className="absolute inset-0 flex items-center justify-center bg-slate/60 opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow text-slate">
+              <Play className="h-4 w-4" aria-hidden="true" />
+            </span>
+          </span>
         )}
+      </Link>
 
-        <div className={`absolute bottom-2 right-2 bg-black/60 px-1.5 py-0.5 text-[9px] text-[#f0f4f2] tracking-wider uppercase ${jetbrainsMono.className}`}>
-           {getTimeLabel()}
-        </div>
-      </div>
-
-      {/* Meta Area */}
-      <div className="flex flex-col gap-1 mt-1 p-3 pt-0">
-        <Link href={`/learn?id=${id}`}>
-          <div className={`text-[11px] text-[#f0f4f2] uppercase tracking-[0.05em] whitespace-nowrap overflow-hidden text-ellipsis ${jetbrainsMono.className} hover:underline decoration-1 underline-offset-2`} data-testid={`text-title-${id}`}>
-            {title || `Derivation_${id.substring(0,8)}`}
-          </div>
+      <div className="min-w-0">
+        <Link
+          href={`/learn?id=${id}`}
+          className="line-clamp-2 text-[16px] font-bold leading-snug text-chalk hover:underline decoration-yellow underline-offset-4"
+          data-testid={`text-title-${id}`}
+        >
+          {label}
         </Link>
-        <div className={`text-[9px] text-[#a8b5ae] uppercase tracking-wider opacity-60 flex gap-2 ${jetbrainsMono.className}`}>
-           <span className={`${isFailed ? 'text-red-400' : ''}`}>{getStatusText()}</span>
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <span className={`inline-flex h-[26px] items-center whitespace-nowrap rounded-full px-2.5 text-[13px] font-bold ${tag.cls}`}>
+            {tag.text}
+          </span>
+          {inProgress && <span className="text-[13px] text-muted-foreground">{generationStageLabel(stage)}</span>}
+          <span className="mono-label !text-[11px] ml-auto">{date}</span>
         </div>
-        {isFailed && errorMessage && (
-          <div className={`text-[9px] text-red-400 mt-1 uppercase truncate opacity-80 ${jetbrainsMono.className}`}>
-             TRACE: {errorMessage}
+        {isFailed && (
+          <div className="mt-2 flex items-center gap-3">
+            {errorMessage && (
+              <p className="min-w-0 flex-1 truncate text-[13px] text-pink/80" title={errorMessage}>
+                {errorMessage}
+              </p>
+            )}
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="ml-auto inline-flex items-center gap-1.5 whitespace-nowrap text-[14px] font-bold text-pink hover:text-chalk"
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden="true" /> Try again
+              </button>
+            )}
           </div>
         )}
       </div>
-
-    </div>
+    </article>
   );
 }
-
-
