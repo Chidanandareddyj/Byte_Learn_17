@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { GraduationCap, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { Wordmark } from "@/components/Wordmark";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -39,26 +40,6 @@ const clerkAppearance = {
     userPreviewSecondaryIdentifier: "text-muted font-sans",
   },
 };
-
-function Wordmark() {
-  return (
-    <Link
-      href="/"
-      aria-label="ByteLearn home"
-      className="inline-flex shrink-0 items-center gap-2.5 text-chalk transition-opacity hover:opacity-90"
-      data-testid="link-home"
-    >
-      <GraduationCap
-        className="h-[22px] w-[22px] text-yellow"
-        strokeWidth={1.8}
-        aria-hidden="true"
-      />
-      <span className="font-serif text-[19px] font-normal italic uppercase leading-none tracking-[0.14em]">
-        ByteLearn
-      </span>
-    </Link>
-  );
-}
 
 export function Navbar({ variant = "landing" }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
