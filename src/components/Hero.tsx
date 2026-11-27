@@ -1,75 +1,100 @@
-import Link from "next/link";
-import { JetBrains_Mono } from "next/font/google";
+"use client";
 
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Globe, Sparkles } from "lucide-react";
+import { FourierFigure, PythagorasFigure, TangentFigure } from "@/components/ChalkFigures";
+
+const EQUATIONS = [
+  { t: <>e<sup>iπ</sup> + 1 = 0</>, cls: "left-[6%] top-[13%] text-chalk -rotate-6 text-[30px]" },
+  { t: "∫ f′(x) dx = f(x)", cls: "right-[6%] top-[12%] text-blue rotate-[5deg] text-[28px]" },
+  { t: "lim (1 + 1/n)ⁿ", cls: "right-[9%] top-[29%] text-yellow rotate-3 text-[26px]" },
+  { t: "a² + b² = c²", cls: "left-[5%] bottom-[8%] text-green rotate-[4deg] text-[30px]" },
+  { t: "Σ 1/n² = π²/6", cls: "right-[7%] bottom-[8%] text-pink -rotate-[4deg] text-[30px]" },
+];
+
+const SAMPLES = [
+  { title: "Pythagoras, by moving shapes", meta: "English · 2:14", Fig: PythagorasFigure, rot: "-rotate-3", pad: "px-16 py-2" },
+  { title: "Derivatives as tangent slopes", meta: "हिन्दी · 3:02", Fig: TangentFigure, rot: "rotate-2", pad: "px-6 py-3" },
+  { title: "Fourier series of a square wave", meta: "తెలుగు · 4:10", Fig: FourierFigure, rot: "-rotate-[1.5deg]", pad: "px-6 py-3" },
+];
 
 export function Hero() {
+  const router = useRouter();
+  const [prompt, setPrompt] = useState("");
+
+  // Visitors on the landing page are signed out; send them to sign up.
+  // The prompt is not carried over (kept UI-only on purpose).
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    router.push("/sign-up");
+  };
+
   return (
-    <main className="grid grid-cols-1 lg:grid-cols-2 px-8 lg:px-20 gap-10 items-center relative z-10 w-full max-w-[1440px] mx-auto min-h-[calc(100vh-160px)] pb-20">
-      <section className="flex flex-col z-10">
-        <div className={`inline-flex text-[11px] text-[#a8b5ae] mb-8 tracking-[0.1em] uppercase border-b border-[#ffffff40] pb-1 w-fit animate-fade-slide-up-1 ${jetbrainsMono.className}`}>
-          Visual Mathematics Generator / v.2.0
+    <section className="relative w-full max-w-[1440px] mx-auto px-6 pb-16 overflow-hidden">
+      {EQUATIONS.map((eq, i) => (
+        <div
+          key={i}
+          aria-hidden="true"
+          className={`hidden lg:block absolute font-serif italic opacity-50 pointer-events-none select-none ${eq.cls}`}
+        >
+          {eq.t}
         </div>
-        <h1 className="text-5xl lg:text-[84px] leading-[1.1] font-light mb-8 text-[#f0f4f2] italic animate-fade-slide-up-2">
-          Ask it.<br />Learn it.
+      ))}
+
+      <div className="relative text-center pt-10 lg:pt-12">
+        <p className="hand text-[26px] lg:text-[28px] text-yellow">today&apos;s lesson: anything you&apos;re curious about</p>
+        <h1 className="font-serif italic font-normal text-chalk text-[64px] sm:text-[88px] lg:text-[118px] leading-none mt-1">
+          Ask it. Learn it.
         </h1>
-        <p className="text-[22px] leading-[1.6] text-[#a8b5ae] font-light max-w-[520px] mb-14 animate-fade-slide-up-3">
-          Generate complex, 3Blue1Brown-style mathematical animations and educational visuals from a single natural language description.
+        <svg className="mx-auto w-[min(560px,80%)] h-6" viewBox="0 0 560 24" aria-hidden="true">
+          <path d="M6 14 C120 4, 300 22, 554 8" stroke="#F4D35E" strokeWidth="4" fill="none" strokeLinecap="round" opacity=".85" />
+        </svg>
+        <p className="mx-auto mt-3 max-w-[640px] text-[18px] lg:text-[20px] leading-relaxed text-muted-foreground">
+          Type a question. Get a chalkboard-style animated lesson, narrated in your language — English, Hindi, Telugu,
+          Tamil, Kannada, Malayalam, Bengali, Marathi or Gujarati.
         </p>
 
-        <div className="flex flex-wrap items-center gap-6 animate-fade-slide-up-4">
-          <Link href="/sign-up" className={`flex items-center justify-center w-[180px] h-[52px] bg-transparent border border-[#f0f4f2] text-[#f0f4f2] cursor-pointer text-[12px] tracking-[0.1em] uppercase transition-all duration-300 hover:bg-[#f0f4f2] hover:text-[#003049] ${jetbrainsMono.className}`}>
-            Start Learning
-          </Link>
-          <span className={`text-[11px] text-[#a8b5ae] opacity-60 uppercase tracking-[0.1em] flex items-center ${jetbrainsMono.className}`}>
-            CTRL + ENTER TO COMPILE<span className="animate-blink ml-1">_</span>
-          </span>
-        </div>
-      </section>
-
-      <section className="relative h-full min-h-[500px] lg:min-h-[600px] flex items-center justify-center">
-        <div className="absolute inset-0 bg-bytelearn-spatial opacity-20 animate-pan-grid pointer-events-none"></div>
-
-        <div className="relative w-full h-full max-w-[600px] max-h-[600px] flex items-center justify-center">
-          <svg className="absolute inset-0 w-full h-full z-[1] pointer-events-none" viewBox="0 0 600 600" preserveAspectRatio="xMidYMid slice">
-            <path className="fill-none stroke-[#f0f4f2] stroke-[0.75] opacity-30 animate-draw" d="M100 150 L 300 300"></path>
-            <path className="fill-none stroke-[#f0f4f2] stroke-[0.75] opacity-30 animate-draw" d="M150 450 L 300 300"></path>
-            <path className="fill-none stroke-[#f0f4f2] stroke-[0.75] opacity-30 animate-draw" d="M500 100 L 300 300"></path>
-            <path className="fill-none stroke-[#f0f4f2] stroke-[0.75] opacity-30 animate-draw" d="M550 400 L 300 300"></path>
-          </svg>
-
-          <div className="absolute bg-[#003049] border border-[rgba(255,255,255,0.25)] p-4 w-[200px] lg:w-[220px] z-[2] top-[5%] lg:top-[15%] left-0 lg:left-[5%] animate-float-1">
-            <span className={`absolute -top-5 left-0 text-[10px] text-[#a8b5ae] ${jetbrainsMono.className}`}>FIG. 01</span>
-            <div className="border-[0.5px] border-[rgba(255,255,255,0.25)] h-[100px] mb-3 bg-[rgba(255,255,255,0.02)] relative overflow-hidden animate-shimmer after:content-[''] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:w-10 after:h-10 after:border after:border-[#a8b5ae] after:rounded-full after:opacity-40"></div>
-            <div className={`text-[10px] text-[#f0f4f2] uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>Vector Spaces</div>
-          </div>
-
-          <div className="absolute bg-[#003049] border border-[rgba(255,255,255,0.25)] p-4 w-[200px] lg:w-[220px] z-[2] bottom-[5%] lg:bottom-[15%] left-[5%] lg:left-[15%] animate-float-2">
-            <span className={`absolute -top-5 left-0 text-[10px] text-[#a8b5ae] ${jetbrainsMono.className}`}>FIG. 02</span>
-            <div className="border-[0.5px] border-[rgba(255,255,255,0.25)] h-[100px] mb-3 bg-[rgba(255,255,255,0.02)] relative overflow-hidden animate-shimmer after:content-[''] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:w-10 after:h-10 after:border after:border-[#a8b5ae] after:rounded-full after:opacity-40"></div>
-            <div className={`text-[10px] text-[#f0f4f2] uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>Fourier Series</div>
-          </div>
-
-          <div className="absolute bg-[#003049] border border-[rgba(255,255,255,0.25)] p-4 w-[200px] lg:w-[220px] z-[2] top-0 lg:top-[10%] right-0 lg:right-[5%] animate-float-3">
-            <span className={`absolute -top-5 left-0 text-[10px] text-[#a8b5ae] ${jetbrainsMono.className}`}>FIG. 03</span>
-            <div className="border-[0.5px] border-[rgba(255,255,255,0.25)] h-[100px] mb-3 bg-[rgba(255,255,255,0.02)] relative overflow-hidden animate-shimmer after:content-[''] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:w-10 after:h-10 after:border after:border-[#a8b5ae] after:rounded-full after:opacity-40"></div>
-            <div className={`text-[10px] text-[#f0f4f2] uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>Manifolds</div>
-          </div>
-
-          <div className="absolute bg-[#003049] border border-[rgba(255,255,255,0.25)] p-4 w-[200px] lg:w-[220px] z-[2] bottom-[10%] lg:bottom-[20%] right-[0%] lg:right-[0%] animate-float-4">
-            <span className={`absolute -top-5 left-0 text-[10px] text-[#a8b5ae] ${jetbrainsMono.className}`}>FIG. 04</span>
-            <div className="border-[0.5px] border-[rgba(255,255,255,0.25)] h-[100px] mb-3 bg-[rgba(255,255,255,0.02)] relative overflow-hidden animate-shimmer after:content-[''] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:w-10 after:h-10 after:border after:border-[#a8b5ae] after:rounded-full after:opacity-40"></div>
-            <div className={`text-[10px] text-[#f0f4f2] uppercase tracking-[0.1em] ${jetbrainsMono.className}`}>Stochastics</div>
-          </div>
-
-          <div className="relative z-10 text-center text-[32px] italic p-10 border border-[#f0f4f2] bg-[#003049] animate-equation-pulse">
-            e<sup className="text-xl">iπ</sup> + 1 = 0
-            <span className={`block text-[10px] not-italic mt-4 text-[#a8b5ae] tracking-[0.2em] uppercase ${jetbrainsMono.className}`}>
-              FINAL_OUTPUT.MP4
+        <div className="relative mx-auto mt-8 max-w-[760px]">
+          <form
+            onSubmit={onSubmit}
+            className="paper !bg-none flex items-center gap-3 p-3 pl-5 text-left"
+          >
+            <label htmlFor="hero-prompt" className="sr-only">What do you want to learn?</label>
+            <input
+              id="hero-prompt"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Why does a rainbow curve?"
+              className="flex-1 min-w-0 bg-transparent text-[18px] text-pen placeholder:text-[#6A7488] outline-none"
+            />
+            <span className="chip hidden sm:inline-flex gap-1.5">
+              <Globe className="w-4 h-4" aria-hidden="true" /> తెలుగు
             </span>
-          </div>
+            <button type="submit" className="btn-pill btn-pill-primary h-[46px]">
+              <Sparkles className="w-4 h-4" aria-hidden="true" /> Teach me
+            </button>
+          </form>
+          <p aria-hidden="true" className="hidden xl:block absolute left-full ml-5 top-3 whitespace-nowrap hand text-[24px] text-pink -rotate-[4deg]">
+            ← try it in your language!
+          </p>
         </div>
-      </section>
-    </main>
+      </div>
+
+      <div id="examples" className="relative mt-12 flex flex-wrap justify-center gap-9 scroll-mt-24">
+        {SAMPLES.map(({ title, meta, Fig, rot, pad }) => (
+          <figure key={title} className={`board !border-[7px] w-[300px] motion-safe:transition-transform hover:rotate-0 ${rot}`}>
+            <div className={`h-[150px] ${pad}`}>
+              <Fig className="w-full h-full" />
+            </div>
+            <figcaption className="px-3.5 pt-2.5 pb-3.5 border-t-[1.5px] border-dashed border-line text-left">
+              <div className="font-bold text-chalk">{title}</div>
+              <div className="mono-label mt-1 !text-[11px]">{meta}</div>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      <p className="mono-label text-center mt-4 !text-[11px]">Sample lessons · illustrations of what ByteLearn makes</p>
+    </section>
   );
 }

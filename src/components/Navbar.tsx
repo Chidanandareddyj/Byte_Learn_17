@@ -1,156 +1,235 @@
 "use client";
 
 import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
-import { GraduationCap, Menu, X } from "lucide-react";
-import { Button } from "./ui/button";
+import { Menu, X } from "lucide-react";
+import { Wordmark } from "@/components/Wordmark";
 import { useState } from "react";
-
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
-const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["300", "400", "500"], style: ["normal", "italic"] });
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface NavbarProps {
   variant?: "landing" | "app";
 }
 
+const landingLinks = [
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#examples", label: "Examples" },
+  { href: "/#languages", label: "Languages" },
+];
+
+const clerkAppearance = {
+  variables: {
+    colorPrimary: "#F4D35E",
+    colorText: "#EEE9DA",
+    colorTextSecondary: "#AAB5AC",
+    colorBackground: "#22302C",
+    colorInputBackground: "#1A2421",
+    colorInputText: "#EEE9DA",
+    colorNeutral: "#EEE9DA",
+    fontFamily: "var(--font-atkinson), sans-serif",
+    borderRadius: "0.75rem",
+  },
+  elements: {
+    avatarBox: "h-9 w-9 ring-1 ring-chalk/30 cursor-pointer",
+    userButtonPopoverCard:
+      "bg-board border border-line rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.45)]",
+    userButtonPopoverActionButton: "hover:bg-chalk/5 text-chalk",
+    userButtonPopoverActionButtonText: "text-chalk font-sans",
+    userButtonPopoverActionButtonIcon: "text-muted",
+    userPreviewMainIdentifier: "text-chalk font-sans",
+    userPreviewSecondaryIdentifier: "text-muted font-sans",
+  },
+};
+
 export function Navbar({ variant = "landing" }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMenu = () => setIsMobileMenuOpen(false);
+  const toggleMobileMenu = () => setIsMobileMenuOpen((open) => !open);
+
+  const mobileToggle = (
+    <button
+      type="button"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-chalk/25 text-chalk md:hidden"
+      onClick={toggleMobileMenu}
+      aria-expanded={isMobileMenuOpen}
+      aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+    >
+      {isMobileMenuOpen ? (
+        <X className="h-5 w-5" aria-hidden="true" />
+      ) : (
+        <Menu className="h-5 w-5" aria-hidden="true" />
+      )}
+    </button>
+  );
 
   if (variant === "landing") {
     return (
-      <nav className={`fixed top-4 md:top-10 left-4 md:left-8 lg:left-20 right-4 md:right-8 lg:right-20 flex flex-col md:flex-row md:items-center justify-between z-[100] animate-fade-slide-up-1 p-4 md:p-0 bg-[#003049]/90 md:bg-transparent backdrop-blur-md md:backdrop-blur-none border border-[rgba(255,255,255,0.1)] md:border-none`}>
-        <div className="flex items-center justify-between w-full md:w-auto">
-            <Link href="/" className={`text-[#f0f4f2] text-[20px] tracking-[0.1em] uppercase italic ${sourceSerif.className}`}>
-            ByteLearn
-            </Link>
-            <button className="md:hidden text-[#f0f4f2]" onClick={toggleMobileMenu}>
-                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-        </div>
+      <nav className="fixed inset-x-0 top-0 z-[100] border-b border-line/50 bg-slate/75 backdrop-blur-md">
+        <div className="mx-auto flex h-[72px] max-w-[1440px] items-center gap-8 px-5 sm:px-8 lg:px-12">
+          <Wordmark />
 
-        <div className={`flex-col md:flex-row items-center gap-6 md:gap-10 mt-6 md:mt-0 ${isMobileMenuOpen ? 'flex' : 'hidden md:flex'} ${jetbrainsMono.className}`}>
-          <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
-            <Link href="#features" className="text-[#a8b5ae] text-[11px] tracking-[0.1em] uppercase transition-colors hover:text-[#f0f4f2]" onClick={() => setIsMobileMenuOpen(false)}>Features</Link>
-          </div>
-          <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
-            <SignedOut>
-              <Link href="/sign-in" className="text-[#a8b5ae] text-[11px] tracking-[0.1em] uppercase transition-colors hover:text-[#f0f4f2]" onClick={() => setIsMobileMenuOpen(false)}>
-                Log In
+          <div className="ml-2 hidden items-center gap-7 md:flex">
+            {landingLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-[15px] text-muted transition-colors hover:text-chalk"
+              >
+                {link.label}
               </Link>
-              <Link href="/sign-up" className="flex items-center justify-center px-6 h-10 border border-[rgba(255,255,255,0.25)] text-[#f0f4f2] text-[11px] tracking-[0.1em] uppercase transition-all duration-300 hover:bg-[#f0f4f2] hover:text-[#003049] w-full md:w-auto" onClick={() => setIsMobileMenuOpen(false)}>
-                Get Started
+            ))}
+          </div>
+
+          <div className="ml-auto flex items-center gap-2.5 sm:gap-3">
+            <ThemeToggle />
+            <SignedOut>
+              <Link
+                href="/sign-in"
+                className="hidden px-2 text-[15px] font-bold text-chalk/85 transition-colors hover:text-chalk sm:inline-flex"
+                onClick={closeMenu}
+              >
+                Log in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="btn-pill btn-pill-primary h-[42px] px-4 text-sm sm:px-5 sm:text-[15px]"
+                onClick={closeMenu}
+              >
+                Start learning
               </Link>
             </SignedOut>
             <SignedIn>
-              <Link href="/dashboard" className="text-[#a8b5ae] text-[11px] tracking-[0.1em] uppercase transition-colors hover:text-[#f0f4f2]" onClick={() => setIsMobileMenuOpen(false)}>
+              <Link
+                href="/dashboard"
+                className="hidden px-2 text-[15px] font-bold text-chalk/85 transition-colors hover:text-chalk sm:inline-flex"
+                onClick={closeMenu}
+              >
                 Dashboard
               </Link>
-              <UserButton 
-                afterSignOutUrl="/"
-                appearance={{
-                  variables: {
-                    colorPrimary: '#f0f4f2',
-                    colorText: '#f0f4f2',
-                    colorTextSecondary: '#a8b5ae',
-                    colorBackground: '#003049',
-                    fontFamily: jetbrainsMono.style.fontFamily,
-                  },
-                  elements: {
-                    avatarBox: "h-8 w-8 ring-1 ring-[#ffffff40] rounded-none cursor-pointer",
-                    userButtonPopoverCard: "bg-[#003049] border border-[rgba(255,255,255,0.15)] rounded-none shadow-[0_0_40px_rgba(0,0,0,0.5)]",
-                    userButtonPopoverActionButton: "hover:bg-[rgba(255,255,255,0.05)] text-[#f0f4f2]",
-                    userButtonPopoverActionButtonText: "text-[#f0f4f2]",
-                    userButtonPopoverActionButtonIcon: "text-[#a8b5ae]",
-                    userPreviewMainIdentifier: `text-[#f0f4f2] ${jetbrainsMono.className}`,
-                    userPreviewSecondaryIdentifier: `text-[#a8b5ae] ${jetbrainsMono.className}`,
-                  }
-                }}
-              />
+              <UserButton afterSignOutUrl="/" appearance={clerkAppearance} />
             </SignedIn>
+            {mobileToggle}
           </div>
         </div>
+
+        {isMobileMenuOpen && (
+          <div className="absolute inset-x-0 top-full border-b border-line bg-slate/95 px-5 py-5 shadow-2xl backdrop-blur-md md:hidden">
+            <div className="flex flex-col gap-1">
+              {landingLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-lg px-3 py-2.5 text-[15px] text-muted transition-colors hover:bg-chalk/5 hover:text-chalk"
+                  onClick={closeMenu}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+            <SignedOut>
+              <div className="mt-4 flex flex-col gap-2 border-t border-line/70 pt-4">
+                <Link
+                  href="/sign-in"
+                  className="btn-pill w-full"
+                  onClick={closeMenu}
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="btn-pill btn-pill-primary w-full"
+                  onClick={closeMenu}
+                >
+                  Start learning
+                </Link>
+              </div>
+            </SignedOut>
+            <SignedIn>
+              <div className="mt-4 border-t border-line/70 pt-4">
+                <Link
+                  href="/dashboard"
+                  className="btn-pill w-full"
+                  onClick={closeMenu}
+                >
+                  Dashboard
+                </Link>
+              </div>
+            </SignedIn>
+          </div>
+        )}
       </nav>
     );
   }
 
-  // Application Navbar (Theorum Dashboard Layout)
+  // Application navbar (dashboard, learn, etc.)
   return (
-    <nav className="h-[80px] px-6 md:px-10 flex items-center justify-between border-b border-[rgba(255,255,255,0.15)] z-[100] bg-bytelearn-back fixed top-0 w-full left-0">
-      <Link href="/" className="flex items-center gap-3 transition-transform hover:-translate-y-0.5" data-testid="link-home">
-        <GraduationCap className="h-6 w-6 text-[#f0f4f2]" />
-        <span className={`text-[#f0f4f2] text-[20px] tracking-[0.05em] uppercase italic font-light ${sourceSerif.className}`}>ByteLearn</span>
-      </Link>
+    <nav className="fixed inset-x-0 top-0 z-[100] h-[72px] border-b border-line/70 bg-slate/90 backdrop-blur-md">
+      <div className="mx-auto flex h-full max-w-[1440px] items-center gap-6 px-5 sm:px-8 lg:px-10">
+        <Wordmark />
 
-      <div className="flex items-center gap-4 md:gap-6">
-        <SignedOut>
-          <Link href="/dashboard" className={`hidden sm:inline-block text-[#f0f4f2] text-[10px] tracking-[0.1em] uppercase transition-colors cursor-pointer hover:text-white ${jetbrainsMono.className}`} data-testid="button-dashboard">
+        <div className="ml-2 hidden items-center gap-6 sm:flex">
+          <Link
+            href="/dashboard"
+            className="text-[15px] font-bold text-chalk/85 transition-colors hover:text-chalk"
+            data-testid="button-dashboard"
+          >
             Dashboard
           </Link>
-        </SignedOut>
-        <SignedIn>
-          <Link href="/dashboard" className={`hidden sm:inline-block text-[#f0f4f2] text-[10px] tracking-[0.1em] uppercase transition-colors cursor-pointer hover:text-white ${jetbrainsMono.className}`} data-testid="button-dashboard">
-            Dashboard
-          </Link>
-          <UserButton 
-            afterSignOutUrl="/"
-            appearance={{
-              variables: {
-                colorPrimary: '#f0f4f2',
-                colorText: '#f0f4f2',
-                colorTextSecondary: '#a8b5ae',
-                colorBackground: '#003049',
-                fontFamily: jetbrainsMono.style.fontFamily,
-              },
-              elements: {
-                avatarBox: "h-8 w-8 ring-1 ring-[#ffffff40] rounded-none cursor-pointer",
-                userButtonPopoverCard: "bg-[#003049] border border-[rgba(255,255,255,0.15)] rounded-none shadow-[0_0_40px_rgba(0,0,0,0.5)]",
-                userButtonPopoverActionButton: "hover:bg-[rgba(255,255,255,0.05)] text-[#f0f4f2]",
-                userButtonPopoverActionButtonText: "text-[#f0f4f2]",
-                userButtonPopoverActionButtonIcon: "text-[#a8b5ae]",
-                userPreviewMainIdentifier: `text-[#f0f4f2] ${jetbrainsMono.className}`,
-                userPreviewSecondaryIdentifier: `text-[#a8b5ae] ${jetbrainsMono.className}`,
-              }
-            }}
-          />
-        </SignedIn>
-
-        <div className="hidden sm:block">
-            <ThemeToggle />
         </div>
-        
-        {/* Mobile App Menu Toggle (only visible on small screens to replace hidden links) */}
-        <div className="sm:hidden flex items-center">
-            <button className="text-[#f0f4f2]" onClick={toggleMobileMenu}>
-                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
+
+        <div className="ml-auto flex items-center gap-2.5 sm:gap-3">
+          <ThemeToggle />
+          <SignedOut>
+            <Link
+              href="/sign-in"
+              className="hidden px-2 text-[15px] font-bold text-chalk/85 transition-colors hover:text-chalk sm:inline-flex"
+              onClick={closeMenu}
+            >
+              Log in
+            </Link>
+            <Link
+              href="/sign-up"
+              className="btn-pill btn-pill-primary hidden h-[42px] px-5 text-[15px] sm:inline-flex"
+              onClick={closeMenu}
+            >
+              Start learning
+            </Link>
+          </SignedOut>
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" appearance={clerkAppearance} />
+          </SignedIn>
+          {mobileToggle}
         </div>
       </div>
-      
-      {/* Mobile Menu Dropdown for App Navbar */}
+
       {isMobileMenuOpen && (
-          <div className="absolute top-[80px] left-0 w-full bg-[#003049]/95 backdrop-blur-md border-b border-[rgba(255,255,255,0.15)] p-6 flex flex-col items-start gap-6 sm:hidden shadow-2xl">
-              <SignedOut>
-                <Link href="/dashboard" className={`text-[#f0f4f2] text-[11px] tracking-[0.1em] uppercase transition-colors cursor-pointer hover:text-white ${jetbrainsMono.className}`} onClick={() => setIsMobileMenuOpen(false)}>
-                    Dashboard
-                </Link>
-              </SignedOut>
-              <SignedIn>
-                <Link href="/dashboard" className={`text-[#f0f4f2] text-[11px] tracking-[0.1em] uppercase transition-colors cursor-pointer hover:text-white ${jetbrainsMono.className}`} onClick={() => setIsMobileMenuOpen(false)}>
-                    Dashboard
-                </Link>
-              </SignedIn>
-              <div className="w-full h-px bg-[rgba(255,255,255,0.15)]"></div>
-              <div className="flex items-center justify-between w-full">
-                  <span className={`text-[#a8b5ae] text-[11px] tracking-[0.1em] uppercase ${jetbrainsMono.className}`}>Theme</span>
-                  <ThemeToggle />
-              </div>
+        <div className="absolute inset-x-0 top-full border-b border-line bg-slate/95 px-5 py-5 shadow-2xl backdrop-blur-md sm:hidden">
+          <div className="flex flex-col gap-1">
+            <Link
+              href="/dashboard"
+              className="rounded-lg px-3 py-2.5 text-[15px] text-muted transition-colors hover:bg-chalk/5 hover:text-chalk"
+              onClick={closeMenu}
+            >
+              Dashboard
+            </Link>
           </div>
+          <SignedOut>
+            <div className="mt-4 flex flex-col gap-2 border-t border-line/70 pt-4">
+              <Link href="/sign-in" className="btn-pill w-full" onClick={closeMenu}>
+                Log in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="btn-pill btn-pill-primary w-full"
+                onClick={closeMenu}
+              >
+                Start learning
+              </Link>
+            </div>
+          </SignedOut>
+        </div>
       )}
     </nav>
   );
 }
-

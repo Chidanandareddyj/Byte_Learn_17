@@ -1,47 +1,45 @@
-import { Languages, Globe, Sparkles } from "lucide-react";
-import { JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import { Clapperboard, Languages, PencilLine } from "lucide-react";
 
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] });
-const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["300", "400", "500"], style: ["normal", "italic"] });
+const STEPS = [
+  { n: "1", Icon: PencilLine, title: "Ask in plain words", body: "One sentence is enough. Say your level and ask for an example.", color: "text-yellow" },
+  { n: "2", Icon: Clapperboard, title: "We draw the lesson", body: "AI writes a step-by-step script and Manim animates every frame.", color: "text-blue" },
+  { n: "3", Icon: Languages, title: "Listen in your language", body: "Narration, chapters and a transcript you can follow along with.", color: "text-pink" },
+];
+
+const LANGUAGES = [
+  ["English", "English"], ["हिन्दी", "Hindi"], ["తెలుగు", "Telugu"], ["தமிழ்", "Tamil"], ["ಕನ್ನಡ", "Kannada"],
+  ["മലയാളം", "Malayalam"], ["বাংলা", "Bengali"], ["मराठी", "Marathi"], ["ગુજરાતી", "Gujarati"],
+];
 
 export function Features() {
   return (
-    <section id="features" className="py-20 bg-bytelearn-back relative z-10 w-full max-w-[1440px] mx-auto px-8 lg:px-20 border-t border-[rgba(255,255,255,0.15)] mt-10">
-      <div className="text-center mb-16 animate-fade-slide-up-1">
-        <h2 className={`text-4xl lg:text-5xl text-[#f0f4f2] italic font-light mb-6 ${sourceSerif.className}`}>Axioms of Learning</h2>
-        <p className={`text-lg text-[#a8b5ae] max-w-2xl mx-auto font-light ${sourceSerif.className}`}>
-          Experience learning like never before with features designed for modern education.
-        </p>
+    <section className="relative w-full max-w-[1200px] mx-auto px-6 py-20">
+      <div id="how-it-works" className="scroll-mt-24 text-center">
+        <p className="hand text-[26px] text-yellow">how it works</p>
+        <h2 className="font-serif italic text-chalk text-[44px] lg:text-[52px] leading-tight">Three steps on the board</h2>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-3">
-        <div className="bg-[#003049] border border-[rgba(255,255,255,0.15)] p-10 hover:-translate-y-1 hover:border-[#f0f4f2] hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] transition-all duration-300 relative group animate-fade-slide-up-2">
-          <div className={`absolute top-0 right-0 border-b border-l border-[rgba(255,255,255,0.15)] px-3 py-1 text-[9px] text-[#a8b5ae] uppercase tracking-wider ${jetbrainsMono.className} group-hover:border-[#f0f4f2] transition-all`}>FIG. 01</div>
-          <Sparkles className="w-8 h-8 text-[#f0f4f2] mb-6 opacity-80" />
-          <h3 className={`text-[11px] uppercase tracking-[0.1em] text-[#f0f4f2] mb-4 ${jetbrainsMono.className}`}>AI-powered animations</h3>
-          <p className={`text-[#a8b5ae] font-light leading-relaxed text-base ${sourceSerif.className}`}>Generate Manim animations from your prompts with advanced AI technology.</p>
-        </div>
+      <ol className="mt-10 grid gap-6 md:grid-cols-3">
+        {STEPS.map(({ n, Icon, title, body, color }) => (
+          <li key={n} className="relative rounded-[14px] border-[1.5px] border-line bg-board p-7">
+            <span className={`hand absolute right-6 top-3 text-[44px] leading-none ${color}`} aria-hidden="true">{n}</span>
+            <Icon className={`w-8 h-8 ${color}`} aria-hidden="true" />
+            <h3 className="mt-5 text-[20px] font-bold text-chalk">{title}</h3>
+            <p className="mt-2 leading-relaxed text-muted-foreground">{body}</p>
+          </li>
+        ))}
+      </ol>
 
-        <div className="bg-[#003049] border border-[rgba(255,255,255,0.15)] p-10 hover:-translate-y-1 hover:border-[#f0f4f2] hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] transition-all duration-300 relative group animate-fade-slide-up-3">
-          <div className={`absolute top-0 right-0 border-b border-l border-[rgba(255,255,255,0.15)] px-3 py-1 text-[9px] text-[#f0f4f2] bg-[rgba(255,255,255,0.1)] uppercase tracking-wider ${jetbrainsMono.className} group-hover:border-[#f0f4f2] group-hover:bg-[#f0f4f2] group-hover:text-[#003049] transition-all`}>NEW_FEATURE</div>
-          <Languages className="w-8 h-8 text-[#f0f4f2] mb-6 opacity-80" />
-          <h3 className={`text-[11px] uppercase tracking-[0.1em] text-[#f0f4f2] mb-4 ${jetbrainsMono.className}`}>Indian Languages Narration</h3>
-          <p className={`text-[#a8b5ae] font-light leading-relaxed text-base ${sourceSerif.className}`}>Learn in your preferred language with natural, conversational narration in Hindi, Telugu, Tamil, Kannada, Malayalam, Bengali, Marathi, and Gujarati.</p>
-        </div>
-
-        <div className="bg-[#003049] border border-[rgba(255,255,255,0.15)] p-10 hover:-translate-y-1 hover:border-[#f0f4f2] hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] transition-all duration-300 relative group animate-fade-slide-up-4">
-          <div className={`absolute top-0 right-0 border-b border-l border-[rgba(255,255,255,0.15)] px-3 py-1 text-[9px] text-[#a8b5ae] uppercase tracking-wider ${jetbrainsMono.className} group-hover:border-[#f0f4f2] transition-all`}>FIG. 02</div>
-          <Globe className="w-8 h-8 text-[#f0f4f2] mb-6 opacity-80" />
-          <h3 className={`text-[11px] uppercase tracking-[0.1em] text-[#f0f4f2] mb-4 ${jetbrainsMono.className}`}>Interactive learning</h3>
-          <p className={`text-[#a8b5ae] font-light leading-relaxed text-base ${sourceSerif.className}`}>Explore concepts visually and intuitively with synchronized animations and narration.</p>
-        </div>
-      </div>
-
-      <div className={`mt-16 text-center animate-fade-slide-up-4`}>
-        <div className={`inline-flex items-center gap-3 border border-[rgba(255,255,255,0.15)] px-4 py-3 text-[10px] text-[#a8b5ae] uppercase tracking-[0.1em] bg-[rgba(255,255,255,0.02)] ${jetbrainsMono.className}`}>
-          <div className="w-2 h-2 rounded-full bg-[#f0f4f2] animate-pulse"></div>
-          Supporting 9 languages for inclusive education
-        </div>
+      <div id="languages" className="scroll-mt-24 mt-16 paper px-8 py-8 text-center">
+        <p className="hand text-[26px] text-[#D9534F]">narrated in 9 languages</p>
+        <ul className="mt-4 flex flex-wrap justify-center gap-2.5">
+          {LANGUAGES.map(([native, en]) => (
+            <li key={en} className="chip !h-10 !text-[16px] gap-2">
+              <span>{native}</span>
+              {native !== en && <span className="text-[12px] text-[#5A6478]">{en}</span>}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
