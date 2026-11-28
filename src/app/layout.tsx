@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import {
   Atkinson_Hyperlegible,
-  Caveat,
   Fraunces,
   Space_Mono,
 } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AppProviders } from "./providers";
 
@@ -31,9 +31,11 @@ const spaceMono = Space_Mono({
   display: "swap",
 });
 
-const caveat = Caveat({
-  subsets: ["latin"],
-  weight: ["500", "700"],
+/* Caveat is self-hosted: the next/font/google loader for it failed the
+   production build. One variable woff2 covers weights 500 and 700. */
+const caveat = localFont({
+  src: "./fonts/Caveat-latin.woff2",
+  weight: "400 700",
   variable: "--font-caveat",
   display: "swap",
 });
